@@ -225,14 +225,17 @@ class ConsolidacionPeriodoExecutorTest {
 
         boolean consolidado = service.consolidarPeriodoForzado(periodo, 1L, "Prueba consolidación");
 
-        assertTrue(consolidado);
-        assertEquals(2, savedBatches.size());
-        assertEquals(2, savedBatches.stream().mapToInt(List::size).sum());
-        assertEquals("CC", savedBatches.get(0).get(0).getTipoId());
-        assertEquals("NIT", savedBatches.get(1).get(0).getTipoId());
-        assertEquals(Integer.valueOf(1), savedBatches.get(0).get(0).getIdSegmento());
-        assertEquals("Colgaap/Modificado", savedBatches.get(0).get(0).getSegmento());
-        assertEquals("Cargador 96", savedBatches.get(0).get(0).getUsuarioCargador());
+        assertTrue(consolidado, "consolidarPeriodoForzado debio retornar true");
+        assertEquals(2, savedBatches.size(), "cantidad de batches persistidos");
+        assertEquals(2, savedBatches.stream().mapToInt(List::size).sum(), "cantidad total de registros persistidos");
+        SiproDetalleConsolidadoRegistro primerRegistro = savedBatches.get(0).get(0);
+        assertEquals("CC", primerRegistro.getTipoId(), "tipoId del primer registro (documento 12345)");
+        assertEquals("NIT", savedBatches.get(1).get(0).getTipoId(), "tipoId del segundo registro (documento 67890)");
+        assertEquals(Integer.valueOf(1), primerRegistro.getIdSegmento(), "idSegmento del primer registro");
+        assertEquals("Colgaap/Modificado", primerRegistro.getSegmento(), "segmento del primer registro");
+        assertEquals("Cargador 96", primerRegistro.getUsuarioCargador(),
+                () -> "usuarioCargador del primer registro (idCargaPlanilla=" + primerRegistro.getIdCargaPlanilla()
+                        + ", idUsuarioCargador=" + primerRegistro.getIdUsuarioCargador() + ")");
 
         ArgumentCaptor<SiproDetalleConsolidacionArchivo> archivoCaptor = ArgumentCaptor.forClass(SiproDetalleConsolidacionArchivo.class);
         verify(consolidacionArchivoRepository, atLeast(4)).save(archivoCaptor.capture());
