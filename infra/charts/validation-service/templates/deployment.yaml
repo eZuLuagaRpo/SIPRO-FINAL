@@ -1,0 +1,43 @@
+# Deployment minimo del validation-service.
+# Centraliza imagen, replicas y el mapeo entre values.yaml, ConfigMap y Secret.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: validation-service
+          # La imagen se resuelve desde values para permitir promotion por ambiente sin tocar la plantilla.
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            # Spring Boot escucha en 8080 dentro del contenedor.
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT
+              value: {{ .Values.env.SERVER_PORT | quote }}
+            - name: JDBC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: JDBC_URL
+            - name: DB_USER
+              # Las credenciales se leen desde Secret para no exponerlas en ConfigMap.
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: DB_PASS

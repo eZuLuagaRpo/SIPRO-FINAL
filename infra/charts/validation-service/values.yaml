@@ -1,0 +1,29 @@
+# Cantidad de replicas del deployment por defecto.
+replicaCount: 1
+
+# Imagen placeholder. Debe alinearse con el registry y tag publicados por CI/CD.
+image:
+  repository: "registry-corporativo/validation-service"
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Servicio interno del cluster. El contenedor escucha en 8080 y el Service publica 80.
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# Ingress opcional. Cuando esta desactivado, el chart solo expone Service interno.
+ingress:
+  enabled: false
+  className: ""
+  hosts: []
+
+# Variables no sensibles o parametrizadas por ambiente. Las credenciales se consumen via Secret.
+env:
+  SERVER_PORT: "8080"
+  JDBC_URL: ""
+  DB_USER: ""
+  DB_PASS: ""
+  AD_URL: ""
+  AD_DOMAIN: ""

@@ -1,0 +1,11 @@
+# Configuracion no sensible inyectada al contenedor como variables de entorno.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  # JDBC_URL apunta a la base primaria del servicio y cambia por ambiente.
+  JDBC_URL: {{ .Values.env.JDBC_URL | quote }}
+  # Parametros de Active Directory o integracion corporativa no secreta.
+  AD_URL: {{ .Values.env.AD_URL | quote }}
+  AD_DOMAIN: {{ .Values.env.AD_DOMAIN | quote }}

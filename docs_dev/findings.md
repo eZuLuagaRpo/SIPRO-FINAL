@@ -1,0 +1,21 @@
+# Findings
+
+- 2026-05-20: Constraint `uq_planilla_activa_fecha_archivo` creada directamente en BD (fuera de Liquibase); no aparecía en código fuente. Detectada por error en tiempo de ejecución al intentar subir Full IFRS con el mismo nombre base que Seg 1 para el mismo período.
+- 2026-05-20: La constraint correcta para planillas activas es `(fecha_corte_informacion, id_producto)` — no por nombre de archivo. Un producto puede tener segmento 1 y 2 con el mismo nombre base de archivo en el mismo período.
+- 2026-05-20: `PartitionInitializer.java` es el mecanismo establecido para fixes de esquema idempotentes. Corre con `@Order(1)` antes del contexto completo de Spring.
+- 2026-05-20: El endpoint `/api/planillas/solicitar` ya ignoraba el control file. La validación en `FileValidationService` era el único punto que lo verificaba y fue eliminada.
+- 2026-05-20: Constraints de BD fuera de Liquibase no aparecen con grep; auditar con `SELECT indexname, indexdef FROM pg_indexes WHERE tablename='sipro_detalle_carga_planillas'`.
+
+- 2026-05-06: La consolidación manual actual vive en [frontend/src/app/components/inicio/inicio.component.ts](frontend/src/app/components/inicio/inicio.component.ts) y [frontend/src/app/components/inicio/inicio.component.html](frontend/src/app/components/inicio/inicio.component.html); usa [frontend/src/app/services/validation.service.ts](frontend/src/app/services/validation.service.ts) contra [backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/infrastructure/entrypoint/MainController.java](backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/infrastructure/entrypoint/MainController.java).
+- 2026-05-06: El backend ya exige bearer token para APIs protegidas mediante [backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/infrastructure/config/SecurityConfig.java](backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/infrastructure/config/SecurityConfig.java) y [backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/infrastructure/security/EntraAuthenticationFilter.java](backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/infrastructure/security/EntraAuthenticationFilter.java).
+- 2026-05-06: La observación de consolidación ya existe en dominio y puede persistirse sin crear tablas nuevas; el soporte está en [backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/domain/service/ConsolidacionPeriodoExecutor.java](backend/services/validation-service/src/main/java/com/bancolombia/sipro/validations/domain/service/ConsolidacionPeriodoExecutor.java).
+- 2026-05-06: El repositorio ya expone suficiente información real para el dashboard admin: planillas aprobadas por período, cabeceras de consolidación e ítems de archivos consolidados.
+- 2026-05-06: Los logs del backend hoy salen solo a consola según [backend/services/validation-service/src/main/resources/logback-spring.xml](backend/services/validation-service/src/main/resources/logback-spring.xml); para visualización en panel hace falta buffer adicional en memoria.
+
+- El resumen actual usa solo sipro_detalle_consolidaciones_planillas + sipro_detalle_consolidado_registros.
+- CREFFSOS ya se genera de forma paramétrica desde PostgreSQL y soporta XLSX, CSV y TSV.
+- La lectura masiva de XLSX ya tiene utilidad reusable: XlsxStreamingReader.
+- La ruta en storage del CREFFSOS incluye consolidados/{fecha}/archivo; la publicación en ruta compartida no incluye subcarpeta por fecha.
+- El frontend ya tiene filtros por año/mes, pero el año hoy está implementado como chips en vez de menú desplegable.
+- DynamicExcelValidationService ya estaba parametrizado por data_validation_rule para CLASIFICACION y la unicidad DOCUMENTO-MONEDA; la brecha real estaba en que el fail-fast estructural no cortaba cuando había columnas extra o desordenadas.
+- La pantalla [frontend/src/app/components/cargar/cargar.component.html](frontend/src/app/components/cargar/cargar.component.html) seguía presentando Descripción como obligatoria aunque el backend acepta valor vacío; se alineó la UX y se agregó ayuda visible sobre el esquema esperado.

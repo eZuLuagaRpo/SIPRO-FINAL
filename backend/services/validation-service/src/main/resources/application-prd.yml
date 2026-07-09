@@ -1,0 +1,39 @@
+spring:
+  profiles:
+    active: prd
+
+# ── LZ: ambiente productivo (impala.bancolombia.corp) ────────────────────────
+# En PDN NO se usan lz.dev.user / lz.dev.password.
+# Las credenciales vienen EXCLUSIVAMENTE de AWS Secrets Manager real.
+# Todas las variables de entorno abajo deben estar definidas en el pipeline CD.
+lz:
+  host: ${LZ_HOST:impala.bancolombia.corp}
+  port: ${LZ_PORT:21050}
+
+  secrets:
+    endpoint: ${LZ_SECRETS_ENDPOINT:}         # vacio → cliente AWS SDK nativo (sin LocalStack)
+    region:   ${LZ_SECRETS_REGION:us-east-1}
+    name:     ${LZ_SECRETS_NAME:lz/creds}
+
+  # En PDN NO configurar lz.dev.user ni lz.dev.password.
+  # Dejarlos ausentes obliga a LzSecretsService a usar Secrets Manager real.
+  dev:
+    user:     ""
+    password: ""
+
+  ssl:
+    truststore-path:     ${LZ_TRUSTSTORE_PATH:}
+    truststore-password: ${LZ_TRUSTSTORE_PWD:changeit}
+    truststore-type:     ${LZ_TRUSTSTORE_TYPE:JKS}
+
+  ingestion:
+    validate-on-startup: ${LZ_VALIDATE_ON_STARTUP:true}
+
+# ── Esquema y tablas LZ productivas ─────────────────────────────────────────
+# PDN: resultados_fcr.fcr_mdm_datos_generales_clientes (tabla real, existe — NO se crea ni se seedea)
+# DEV/QA: LzDevSeedService crea default.sipro_fcr_mdm_datos_generales_clientes con datos dummy
+app:
+  lz:
+    schema: ${APP_LZ_SCHEMA:resultados_fcr}
+    tables:
+      mdm: ${APP_LZ_TABLE_MDM:fcr_mdm_datos_generales_clientes}
