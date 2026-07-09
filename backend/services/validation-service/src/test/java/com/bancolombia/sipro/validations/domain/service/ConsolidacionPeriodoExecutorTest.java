@@ -174,13 +174,16 @@ class ConsolidacionPeriodoExecutorTest {
             .thenAnswer(invocation -> new ByteArrayInputStream(excelBytes));
         when(fileStorageService.storeBytes(any(), anyString(), anyString())).thenReturn("consolidados/2026-05-31/CONSOLIDADO_2026-05-31.xlsx");
         when(clienteLzRepository.findLatestTipoIdByNumeroIdIn(anyCollection())).thenAnswer(invocation -> {
-            List<String> documentos = new ArrayList<>(invocation.getArgument(0));
+            // El cruce en LZ se hace por NIT (columna 1 de la planilla: "9001"/"9002"),
+            // no por DOCUMENTO (columna 3: "12345"/"67890"). Ver
+            // ConsolidacionPeriodoExecutor.escanearExcel()/cargarTipoIdPorNit().
+            List<String> nits = new ArrayList<>(invocation.getArgument(0));
             List<ClienteLzRepository.DocumentoTipoIdProjection> response = new ArrayList<>();
-            if (documentos.contains("12345")) {
-                response.add(projection("12345", "CC"));
+            if (nits.contains("9001")) {
+                response.add(projection("9001", "CC"));
             }
-            if (documentos.contains("67890")) {
-                response.add(projection("67890", "NIT"));
+            if (nits.contains("9002")) {
+                response.add(projection("9002", "NIT"));
             }
             return response;
         });
