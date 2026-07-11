@@ -26,6 +26,9 @@ import java.util.stream.Collectors;
 public class RbacService {
 
     private static final int ROL_APROBADOR_ID = 2;
+    private static final int ROL_SOPORTE_TECNICO_ID = 3;
+    /** Usuario_Analista (4), Auditoria (5) y Admin_Permisos (6): acceso a /resumen y /tablero. */
+    private static final Set<Integer> ROLES_CONSOLIDADOS_VISIBLES = Set.of(4, 5, 6);
 
     private static final Logger logger = LoggerFactory.getLogger(RbacService.class);
 
@@ -113,6 +116,8 @@ public class RbacService {
         boolean puedeVisualizar = false;
         boolean puedeExportar = false;
         boolean puedeModificar = false;
+        boolean puedeAccederAdminTecnico = false;
+        boolean puedeVisualizarConsolidados = false;
 
         for (SiproRolesPermisos rol : rolesEfectivos.values()) {
             if (rol == null) {
@@ -125,6 +130,8 @@ public class RbacService {
             if (rol.puedeVisualizar()) puedeVisualizar = true;
             if (rol.getExportarReportes() != null && rol.getExportarReportes() == 1) puedeExportar = true;
             if (rol.getModificarParametros() != null && rol.getModificarParametros() == 1) puedeModificar = true;
+            if (Integer.valueOf(ROL_SOPORTE_TECNICO_ID).equals(rol.getIdRol())) puedeAccederAdminTecnico = true;
+            if (ROLES_CONSOLIDADOS_VISIBLES.contains(rol.getIdRol())) puedeVisualizarConsolidados = true;
         }
 
         permisos.setPuedeCargar(puedeCargar);
@@ -133,10 +140,13 @@ public class RbacService {
         permisos.setPuedeVisualizar(puedeVisualizar);
         permisos.setPuedeExportar(puedeExportar);
         permisos.setPuedeModificarParametros(puedeModificar);
-        // puedeAccederPanelAdmin se deriva directamente del flag modificar_parametros de la tabla
-        // sipro_roles_permisos — sin IDs ni nombres quemados. Si en el futuro el negocio necesita
-        // una separación fina, se agrega una columna panel_admin a esa tabla.
-        permisos.setPuedeAccederPanelAdmin(puedeModificar);
+        // puedeAccederPanelAdmin: acceso a /admin (dashboard técnico, consola SQL, logs), exclusivo
+        // de Soporte Técnico (id_rol=3). No se deriva de un flag genérico porque, tras el rediseño de
+        // roles, Soporte Técnico (3) y Auditoria (5) quedaron con exactamente los mismos flags en
+        // sipro_roles_permisos — igual que ya ocurría con ROL_APROBADOR_ID, hace falta anclar por id_rol.
+        permisos.setPuedeAccederPanelAdmin(puedeAccederAdminTecnico);
+        // puedeVisualizarConsolidados: acceso a /resumen y /tablero (Usuario_Analista, Auditoria, Admin_Permisos).
+        permisos.setPuedeVisualizarConsolidados(puedeVisualizarConsolidados);
 
         // Construir lista detallada de productos asignados
         List<ProductoRolResponse> productosAsignados = asignaciones.stream()

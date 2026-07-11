@@ -28,6 +28,12 @@ public class AdminAccessService {
         this.adminPanelProperties = adminPanelProperties;
     }
 
+    /**
+     * Acceso general a la ruta /admin: Soporte Técnico (dashboard, consola SQL, logs) o
+     * Admin_Permisos (que además necesita entrar aquí para ejecutar consolidación manual).
+     * Para restringir una acción a un único perfil dentro de /admin, usar
+     * {@link #requireAdminTecnico} o {@link #requireAdminPermisos} en su lugar.
+     */
     public void requireAdmin(SiproAuthenticatedUser principal) {
         if (!isAdmin(principal)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -36,20 +42,57 @@ public class AdminAccessService {
     }
 
     public boolean isAdmin(SiproAuthenticatedUser principal) {
-        if (principal == null || principal.idUsuario() == null) {
-            return false;
-        }
+        return isAdminTecnico(principal) || isAdminPermisos(principal);
+    }
 
+    /** Soporte Técnico (id_rol=3): dashboard, consola SQL y logs del panel /admin. */
+    public void requireAdminTecnico(SiproAuthenticatedUser principal) {
+        if (!isAdminTecnico(principal)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "No tienes permisos administrativos para usar este panel.");
+        }
+    }
+
+    public boolean isAdminTecnico(SiproAuthenticatedUser principal) {
+        UsuarioPermisosResponse permisos = obtenerPermisos(principal);
+        if (permisos != null && permisos.isPuedeAccederPanelAdmin()) {
+            return true;
+        }
+        return esFallbackLegado(principal);
+    }
+
+    /** Admin_Permisos (id_rol=6): /parametros y ejecución de consolidación manual. */
+    public void requireAdminPermisos(SiproAuthenticatedUser principal) {
+        if (!isAdminPermisos(principal)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "No tienes permisos administrativos para usar este panel.");
+        }
+    }
+
+    public boolean isAdminPermisos(SiproAuthenticatedUser principal) {
+        UsuarioPermisosResponse permisos = obtenerPermisos(principal);
+        if (permisos != null && permisos.isPuedeModificarParametros()) {
+            return true;
+        }
+        return esFallbackLegado(principal);
+    }
+
+    private UsuarioPermisosResponse obtenerPermisos(SiproAuthenticatedUser principal) {
+        if (principal == null || principal.idUsuario() == null) {
+            return null;
+        }
         try {
-            UsuarioPermisosResponse permisos = rbacService.obtenerPermisosUsuario(
-                    principal.idUsuario(),
-                    principal.groupNames());
-            if (permisos.isPuedeModificarParametros()) {
-                return true;
-            }
+            return rbacService.obtenerPermisosUsuario(principal.idUsuario(), principal.groupNames());
         } catch (Exception ex) {
             logger.warn("No fue posible validar RBAC admin para usuario {}: {}",
                     principal.idUsuario(), ex.getMessage());
+            return null;
+        }
+    }
+
+    private boolean esFallbackLegado(SiproAuthenticatedUser principal) {
+        if (principal == null) {
+            return false;
         }
 
         boolean legacyAdmin = Stream.of(

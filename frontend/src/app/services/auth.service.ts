@@ -44,6 +44,8 @@ export class AuthService {
     puedeVisualizar: false,
     puedeExportar: false,
     puedeModificarParametros: false,
+    puedeAccederPanelAdmin: false,
+    puedeVisualizarConsolidados: false,
     productosAsignados: []
   };
 
@@ -210,19 +212,34 @@ export class AuthService {
   }
 
   /**
-   * Acceso efectivo al resumen consolidado: solo perfil admin.
+   * Acceso efectivo a /resumen y /tablero: Usuario_Analista, Auditoria y Admin_Permisos.
    */
   puedeAccederResumenConsolidado(): boolean {
-    return this.puedeAdministrar();
+    return this.getPermisos().puedeVisualizarConsolidados === true;
   }
 
   /**
-   * Acceso efectivo al panel de administrador.
-   * Usa el flag calculado dinámicamente por el backend desde sipro_roles_permisos.
-   * Sin IDs ni nombres quemados: si el grupo AD cambia en Entra, solo debe actualizarse la tabla.
+   * Acceso efectivo al panel /admin: Soporte Técnico (dashboard/consola SQL/logs) o Admin_Permisos
+   * (que también entra aquí únicamente para ejecutar la consolidación manual).
    */
   puedeAccederPanelAdmin(): boolean {
+    return this.getPermisos().puedeAccederPanelAdmin === true || this.puedeModificarParametros();
+  }
+
+  /**
+   * true solo para Soporte Técnico (id_rol=3). Úsalo dentro de /admin para mostrar/ocultar
+   * las secciones que Admin_Permisos no debe ver (consola SQL, logs técnicos).
+   */
+  esAdminTecnico(): boolean {
     return this.getPermisos().puedeAccederPanelAdmin === true;
+  }
+
+  /**
+   * true solo para Admin_Permisos (id_rol=6): es el único perfil autorizado a ejecutar la
+   * consolidación manual dentro de /admin. Soporte Técnico ve el panel pero no esta acción.
+   */
+  puedeEjecutarConsolidacionManual(): boolean {
+    return this.puedeModificarParametros();
   }
 
   /**
@@ -233,7 +250,7 @@ export class AuthService {
   }
 
   /**
-   * Verifica acceso administrativo (parámetros, resumen consolidado).
+   * Verifica acceso administrativo a /parametros: exclusivo de Admin_Permisos (id_rol=6).
    * Totalmente data-driven: lee el flag puedeModificarParametros resuelto por el backend
    * desde sipro_roles_permisos.modificar_parametros — sin nombres ni IDs quemados.
    */

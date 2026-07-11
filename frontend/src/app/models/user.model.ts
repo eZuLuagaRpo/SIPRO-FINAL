@@ -29,8 +29,10 @@ export interface UsuarioPermisos {
   puedeVisualizar: boolean;
   puedeExportar: boolean;
   puedeModificarParametros: boolean;
-  /** Calculado dinámicamente por el backend desde sipro_roles_permisos — sin IDs quemados. */
+  /** Acceso a /admin (dashboard técnico, consola SQL, logs): exclusivo de Soporte Técnico (id_rol=3). */
   puedeAccederPanelAdmin?: boolean;
+  /** Acceso a /resumen y /tablero: Usuario_Analista, Auditoria y Admin_Permisos (id_rol 4, 5 y 6). */
+  puedeVisualizarConsolidados?: boolean;
   productosAsignados?: ProductoRol[];
 }
 

@@ -1001,7 +1001,8 @@ export class ParametrosComponent implements OnInit {
 
   get usuariosAprobadores(): UsuarioResumen[] {
     // Solo rol 2 (SIPRO_Usuario_Aprobador) puede ser líder aprobador de cargadores.
-    // El rol 3 (SIPRO_Admin_Tecnico) no gestiona aprobaciones operativas.
+    // Los roles 3 (SIPRO_Soporte_Tecnico), 5 (SIPRO_Auditoria) y 6 (SIPRO_Admin_Permisos)
+    // no gestionan aprobaciones operativas.
     return this.usuarios.filter(u => u.idRolActual === 2);
   }
 

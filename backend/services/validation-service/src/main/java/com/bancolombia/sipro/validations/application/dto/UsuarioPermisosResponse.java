@@ -15,8 +15,10 @@ public class UsuarioPermisosResponse {
     private boolean puedeVisualizar;
     private boolean puedeExportar;
     private boolean puedeModificarParametros;
-    /** Acceso al panel de administrador: calculado dinámicamente desde sipro_roles_permisos, sin IDs quemados. */
+    /** Acceso al panel /admin (dashboard técnico, consola SQL y logs): exclusivo del rol Soporte Técnico (id_rol=3). */
     private boolean puedeAccederPanelAdmin;
+    /** Acceso a /resumen y /tablero: roles Usuario_Analista, Auditoria y Admin_Permisos (id_rol 4, 5 y 6). */
+    private boolean puedeVisualizarConsolidados;
     private List<ProductoRolResponse> productosAsignados;
 
     public UsuarioPermisosResponse() {
@@ -77,6 +79,14 @@ public class UsuarioPermisosResponse {
 
     public void setPuedeAccederPanelAdmin(boolean puedeAccederPanelAdmin) {
         this.puedeAccederPanelAdmin = puedeAccederPanelAdmin;
+    }
+
+    public boolean isPuedeVisualizarConsolidados() {
+        return puedeVisualizarConsolidados;
+    }
+
+    public void setPuedeVisualizarConsolidados(boolean puedeVisualizarConsolidados) {
+        this.puedeVisualizarConsolidados = puedeVisualizarConsolidados;
     }
 
     public List<ProductoRolResponse> getProductosAsignados() {

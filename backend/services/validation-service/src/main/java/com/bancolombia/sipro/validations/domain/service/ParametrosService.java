@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 /**
  * Servicio de dominio para la pantalla de Cambio de Parámetros.
- * Solo accesible por usuarios con rol SIPRO_Admin_Funcional (modificar_parametros=1).
+ * Solo accesible por usuarios con rol SIPRO_Admin_Permisos (id_rol=6, modificar_parametros=1).
  */
 @Service
 @Transactional(readOnly = true)
@@ -91,7 +91,7 @@ public class ParametrosService {
     // ── Guard centralizado ─────────────────────────────────────────────────
 
     public void requireParametros(SiproAuthenticatedUser principal) {
-        adminAccessService.requireAdmin(principal);
+        adminAccessService.requireAdminPermisos(principal);
     }
 
     // ── Rol Azure: resolución en tiempo real ──────────────────────────────

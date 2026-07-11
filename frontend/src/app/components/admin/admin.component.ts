@@ -141,7 +141,7 @@ export class AdminComponent implements OnInit, OnDestroy {
           return;
         }
 
-        if (!this.authService.puedeAdministrar()) {
+        if (!this.authService.puedeAccederPanelAdmin()) {
           this.router.navigate(['/inicio']);
           return;
         }
@@ -200,6 +200,16 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   get puedeVerParametros(): boolean {
     return this.authService.puedeAdministrar();
+  }
+
+  /** Soporte Técnico (id_rol=3): ve la consola SQL y los logs técnicos de este panel. */
+  get esAdminTecnico(): boolean {
+    return this.authService.esAdminTecnico();
+  }
+
+  /** Admin_Permisos (id_rol=6): único perfil que puede ejecutar la consolidación manual. */
+  get esAdminPermisos(): boolean {
+    return this.authService.puedeEjecutarConsolidacionManual();
   }
 
   get tooltipCargar(): string {
@@ -376,7 +386,8 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   get puedeEjecutarConsolidacion(): boolean {
     return Boolean(
-      this.periodoSeleccionado
+      this.esAdminPermisos
+      && this.periodoSeleccionado
       && !this.periodoSeleccionado.consolidado
       && this.estadoPeriodo?.puedeEjecutarManual
       && this.confirmacionConsolidacion

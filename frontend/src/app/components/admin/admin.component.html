@@ -219,37 +219,46 @@
                   </div>
                 </div>
 
-                <div class="confirm-title">Confirmar ejecución</div>
+                <ng-container *ngIf="esAdminPermisos; else sinPermisoEjecutarTpl">
+                  <div class="confirm-title">Confirmar ejecución</div>
 
-                <div class="form-group">
-                  <label class="form-label-plain">Motivo de consolidación manual <span class="required">*</span></label>
-                  <textarea class="form-textarea" [(ngModel)]="observacionConsolidacion" [attr.maxlength]="maxObservacionChars"
-                    placeholder="Describe el motivo de esta consolidación manual..."></textarea>
-                  <div class="field-counter">{{ observacionConsolidacionCount }}/{{ maxObservacionChars }}</div>
-                </div>
+                  <div class="form-group">
+                    <label class="form-label-plain">Motivo de consolidación manual <span class="required">*</span></label>
+                    <textarea class="form-textarea" [(ngModel)]="observacionConsolidacion" [attr.maxlength]="maxObservacionChars"
+                      placeholder="Describe el motivo de esta consolidación manual..."></textarea>
+                    <div class="field-counter">{{ observacionConsolidacionCount }}/{{ maxObservacionChars }}</div>
+                  </div>
 
-                <label class="consent-label">
-                  <input type="checkbox" [(ngModel)]="confirmacionConsolidacion">
-                  <span>Confirmo que tengo permisos para ejecutar esta consolidación manual. Entiendo que solo se permite una consolidación por período y que no se reutilizarán XLSX ya consolidados.</span>
-                </label>
+                  <label class="consent-label">
+                    <input type="checkbox" [(ngModel)]="confirmacionConsolidacion">
+                    <span>Confirmo que tengo permisos para ejecutar esta consolidación manual. Entiendo que solo se permite una consolidación por período y que no se reutilizarán XLSX ya consolidados.</span>
+                  </label>
 
-                <label class="consent-label consent-label--warning" *ngIf="requiereConfirmacionConsolidacionParcial">
-                  <input type="checkbox" [(ngModel)]="confirmacionConsolidacionParcial">
-                  <span>{{ confirmacionConsolidacionParcialTexto }}</span>
-                </label>
+                  <label class="consent-label consent-label--warning" *ngIf="requiereConfirmacionConsolidacionParcial">
+                    <input type="checkbox" [(ngModel)]="confirmacionConsolidacionParcial">
+                    <span>{{ confirmacionConsolidacionParcialTexto }}</span>
+                  </label>
 
-                <div class="confirm-actions">
-                  <button type="button" class="btn btn-lg" [disabled]="!puedeEjecutarConsolidacion"
-                    (click)="ejecutarConsolidacion()">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    <span *ngIf="!consolidacionEnCurso">Ejecutar consolidación</span>
-                    <span *ngIf="consolidacionEnCurso">Ejecutando consolidación...</span>
-                  </button>
-                  <span class="helper-caption">{{ confirmacionAyudaTexto }}</span>
-                </div>
+                  <div class="confirm-actions">
+                    <button type="button" class="btn btn-lg" [disabled]="!puedeEjecutarConsolidacion"
+                      (click)="ejecutarConsolidacion()">
+                      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <span *ngIf="!consolidacionEnCurso">Ejecutar consolidación</span>
+                      <span *ngIf="consolidacionEnCurso">Ejecutando consolidación...</span>
+                    </button>
+                    <span class="helper-caption">{{ confirmacionAyudaTexto }}</span>
+                  </div>
 
-                <p *ngIf="consolidacionRespuesta" class="feedback feedback--success">{{ consolidacionRespuesta }}</p>
-                <p *ngIf="consolidacionError" class="feedback feedback--error">{{ consolidacionError }}</p>
+                  <p *ngIf="consolidacionRespuesta" class="feedback feedback--success">{{ consolidacionRespuesta }}</p>
+                  <p *ngIf="consolidacionError" class="feedback feedback--error">{{ consolidacionError }}</p>
+                </ng-container>
+
+                <ng-template #sinPermisoEjecutarTpl>
+                  <div class="empty-state">
+                    <strong>Ejecución no disponible</strong>
+                    <p>Tu perfil puede consultar archivos y consolidaciones anteriores, pero ejecutar una consolidación manual está reservado al perfil Admin_Permisos.</p>
+                  </div>
+                </ng-template>
               </div>
             </div>
 

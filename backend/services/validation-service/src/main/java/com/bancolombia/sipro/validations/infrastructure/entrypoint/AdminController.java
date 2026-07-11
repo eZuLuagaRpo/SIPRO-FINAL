@@ -73,7 +73,9 @@ public class AdminController {
             @AuthenticationPrincipal SiproAuthenticatedUser principal,
             @RequestParam("periodo") String periodo,
             @RequestParam("observacion") String observacion) {
-        adminAccessService.requireAdmin(principal);
+        // Ejecutar consolidación manual es la única acción de /admin restringida a Admin_Permisos
+        // (id_rol=6). Soporte Técnico (id_rol=3) ve el resto del panel pero no puede ejecutar esto.
+        adminAccessService.requireAdminPermisos(principal);
         LocalDate periodoValoracion = parsePeriodo(periodo, true);
 
         if (observacion == null || observacion.isBlank()) {
