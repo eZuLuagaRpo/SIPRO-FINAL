@@ -58,8 +58,7 @@ src/main/java/com/bancolombia/sipro/validations/
 | GET | /api/main/consolidacion/resumen | Resumen consolidado |
 | GET | /api/main/consolidacion/detalle-diferencia | Detalle consolidado por periodo |
 | GET | /api/main/consolidacion/resumen/reporte | Descarga XLSX del resumen consolidado |
-| POST | /api/main/consolidacion/manual | Iniciar consolidacion manual |
-| GET | /api/main/consolidacion/manual/estado | Consultar estado de consolidacion |
+| POST | /api/admin/consolidacion/manual | Iniciar consolidacion manual (panel /admin, exclusivo Admin_Permisos) |
 | POST | /api/lz/ingest | Iniciar ingesta LZ |
 
 ## Comportamientos importantes

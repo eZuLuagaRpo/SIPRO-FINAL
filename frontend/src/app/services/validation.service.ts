@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ValidationResult, ValidationJobStartResponse, ValidationJobStatusResponse, Producto, Segmento, RangoFechaCorteResponse, ResumenCargas, CargasPendientes, AprobacionesPendientes, VentanaCargaResponse, ConsolidacionResumenResponse, ConsolidacionManualStatus, TableroControlResponse } from '../models/validation.model';
+import { ValidationResult, ValidationJobStartResponse, ValidationJobStatusResponse, Producto, Segmento, RangoFechaCorteResponse, ResumenCargas, CargasPendientes, AprobacionesPendientes, VentanaCargaResponse, ConsolidacionResumenResponse, TableroControlResponse } from '../models/validation.model';
 import { Planilla } from '../models/planilla.model';
 
 /**
@@ -196,29 +196,6 @@ export class ValidationService {
   validarVentanaCarga(fechaCorte: string): Observable<VentanaCargaResponse> {
     return this.http.get<VentanaCargaResponse>(
       `${environment.apiUrl}/config/ventana-carga?fechaCorte=${encodeURIComponent(fechaCorte)}`
-    );
-  }
-
-  /**
-   * Ejecuta consolidación manual forzada de un periodo.
-   * Solo para pruebas/admin.
-   * @param periodo Fecha en formato yyyy-MM-dd (último día del mes)
-   * @param idUsuario ID del usuario que ejecuta (opcional)
-   */
-  ejecutarConsolidacionManual(periodo: string, idUsuario?: number): Observable<ConsolidacionManualStatus> {
-    const params = idUsuario != null ? `&idUsuario=${idUsuario}` : '';
-    return this.http.post<ConsolidacionManualStatus>(
-      `${environment.apiUrl}/main/consolidacion/manual?periodo=${encodeURIComponent(periodo)}${params}`,
-      null
-    );
-  }
-
-  /**
-   * Consulta el estado actual de una consolidación manual para el período enviado.
-   */
-  obtenerEstadoConsolidacionManual(periodo: string): Observable<ConsolidacionManualStatus> {
-    return this.http.get<ConsolidacionManualStatus>(
-      `${environment.apiUrl}/main/consolidacion/manual/estado?periodo=${encodeURIComponent(periodo)}`
     );
   }
 

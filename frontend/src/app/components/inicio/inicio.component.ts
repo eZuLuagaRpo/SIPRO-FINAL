@@ -5,11 +5,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../services/auth.service';
 import { ValidationService } from '../../services/validation.service';
 import { User, UsuarioPermisos } from '../../models/user.model';
-import { ResumenCargas, CargasPendientes, ProductoPendiente, AprobacionesPendientes, MesPendienteAprobacion, ConsolidacionManualStatus } from '../../models/validation.model';
-import { Subscription, forkJoin, interval } from 'rxjs';
+import { ResumenCargas, CargasPendientes, ProductoPendiente, AprobacionesPendientes, MesPendienteAprobacion } from '../../models/validation.model';
+import { forkJoin } from 'rxjs';
 
 /**
- * Pantalla inicial que resume el estado operativo del usuario y expone accesos a carga, aprobación y consolidación.
+ * Pantalla inicial que resume el estado operativo del usuario y expone accesos a carga y aprobación.
  */
 @Component({
   selector: 'app-inicio',
@@ -20,9 +20,9 @@ import { Subscription, forkJoin, interval } from 'rxjs';
 })
 export class InicioComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
+  /** Nombres de mes usados por updateDateTime() para el reloj del encabezado. */
   private readonly MESES_CONSOLIDACION = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  private readonly CONSOLIDACION_STATUS_STORAGE_KEY = 'sipro.consolidacion.manual.periodo';
 
   currentUser: User | null = null;
   permisos: UsuarioPermisos | null = null;
@@ -43,15 +43,6 @@ export class InicioComponent implements OnInit, OnDestroy {
   aprobacionesPendientes: AprobacionesPendientes | null = null;
   aprobacionesCargando = true;
   aprobacionesMesIdx = 0; // 0=más reciente ... 2=más antiguo
-
-  // Consolidación manual (admin)
-  consolidacionEnCurso = false;
-  consolidacionMensaje = '';
-  consolidacionExito: boolean | null = null;
-  consolidacionPeriodoSeleccionado = '2026-02';
-  consolidacionEstadoActual: ConsolidacionManualStatus | null = null;
-  private consolidacionPollingSubscription: Subscription | null = null;
-  private consolidacionProtectedActivityActive = false;
 
   // Calendario visual
   calMesNombre = '';
@@ -170,10 +161,6 @@ export class InicioComponent implements OnInit, OnDestroy {
     private validationService: ValidationService,
     private router: Router
   ) { }
-
-  private get isAdminUser(): boolean {
-    return this.authService.puedeAdministrar();
-  }
 
   ngOnInit() {
     this.authService.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(user => {
@@ -499,202 +486,6 @@ export class InicioComponent implements OnInit, OnDestroy {
   /** Indica si el usuario actual es admin (visible para el template). */
   get esAdmin(): boolean {
     return this.authService.puedeAdministrar();
-  }
-
-  get consolidacionPuedeEjecutarse(): boolean {
-    return this.construirFechaCorteConsolidacion(this.consolidacionPeriodoSeleccionado) != null;
-  }
-
-  get consolidacionPeriodoLabel(): string {
-    const valor = this.consolidacionPeriodoSeleccionado;
-    if (!/^\d{4}-\d{2}$/.test(valor)) {
-      return 'periodo seleccionado';
-    }
-
-    const [anioTexto, mesTexto] = valor.split('-');
-    const mes = Number(mesTexto);
-    if (!Number.isInteger(mes) || mes < 1 || mes > 12) {
-      return 'periodo seleccionado';
-    }
-
-    return `${this.MESES_CONSOLIDACION[mes - 1]} ${anioTexto}`;
-  }
-
-  actualizarPeriodoConsolidacion(event: Event) {
-    const target = event.target as HTMLInputElement | null;
-    this.consolidacionPeriodoSeleccionado = target?.value ?? '';
-    this.consolidacionMensaje = '';
-    this.consolidacionExito = null;
-    if (!this.consolidacionEnCurso) {
-      this.consolidacionEstadoActual = null;
-    }
-  }
-
-  /** Ejecuta consolidación manual del periodo seleccionado (temporal, solo admin). */
-  ejecutarConsolidacionManual() {
-    if (!this.isAdminUser || this.consolidacionEnCurso) return;
-
-    const periodo = this.construirFechaCorteConsolidacion(this.consolidacionPeriodoSeleccionado);
-    if (!periodo) {
-      this.consolidacionExito = false;
-      this.consolidacionMensaje = 'Selecciona un periodo válido antes de consolidar.';
-      return;
-    }
-
-    const idUsuario = this.currentUser?.idUsuario ? Number(this.currentUser.idUsuario) : undefined;
-    this.consolidacionEnCurso = true;
-    this.consolidacionMensaje = '';
-    this.consolidacionExito = null;
-    this.consolidacionEstadoActual = null;
-    this.beginConsolidacionProtectedActivity();
-
-    this.validationService.ejecutarConsolidacionManual(periodo, idUsuario).subscribe({
-      next: (resp) => {
-        this.aplicarEstadoConsolidacion(resp);
-        if (resp.terminal) {
-          this.finalizarSeguimientoConsolidacion(resp, false);
-          return;
-        }
-
-        this.persistirSeguimientoConsolidacion(periodo);
-        this.iniciarPollingConsolidacion(periodo);
-      },
-      error: (err) => {
-        this.consolidacionExito = false;
-        this.consolidacionMensaje = 'Error al ejecutar consolidación: '
-          + (err.error?.mensaje || err.message || 'Error desconocido');
-        this.consolidacionEstadoActual = null;
-        this.consolidacionEnCurso = false;
-        this.endConsolidacionProtectedActivity();
-        this.limpiarSeguimientoConsolidacionPersistido();
-      }
-    });
-  }
-
-  get consolidacionEstadoEtiqueta(): string {
-    return this.consolidacionEstadoActual?.estado || 'SIN_EJECUCION';
-  }
-
-  get consolidacionDetalleRegistros(): string {
-    const estado = this.consolidacionEstadoActual;
-    if (!estado) {
-      return '';
-    }
-
-    if (estado.cantidadArchivosConsolidados > 0 || estado.cantidadRegistrosConsolidados > 0) {
-      return `${estado.cantidadArchivosConsolidados} archivo(s), ${estado.cantidadRegistrosConsolidados} registro(s).`;
-    }
-
-    if (estado.fechaHoraInicio && !estado.fechaHoraFin) {
-      return 'La ejecución sigue en servidor. Si pierdes conexión, al volver retomaremos este estado.';
-    }
-
-    return '';
-  }
-
-  private restaurarSeguimientoConsolidacion() {
-    if (!this.isAdminUser) {
-      return;
-    }
-
-    const periodo = sessionStorage.getItem(this.CONSOLIDACION_STATUS_STORAGE_KEY);
-    if (!periodo) {
-      return;
-    }
-
-    this.consolidacionPeriodoSeleccionado = periodo.slice(0, 7);
-    this.consolidacionEnCurso = true;
-    this.beginConsolidacionProtectedActivity();
-    this.iniciarPollingConsolidacion(periodo, true);
-  }
-
-  private iniciarPollingConsolidacion(periodo: string, consultarDeInmediato = false) {
-    this.detenerPollingConsolidacion();
-
-    const consultarEstado = () => {
-      this.validationService.obtenerEstadoConsolidacionManual(periodo).subscribe({
-        next: (estado) => {
-          this.aplicarEstadoConsolidacion(estado);
-          if (estado.terminal) {
-            this.finalizarSeguimientoConsolidacion(estado, true);
-          }
-        },
-        error: (err) => {
-          this.consolidacionExito = false;
-          this.consolidacionMensaje = 'No fue posible consultar el estado de la consolidación: '
-            + (err.error?.mensaje || err.message || 'Error desconocido');
-        }
-      });
-    };
-
-    if (consultarDeInmediato) {
-      consultarEstado();
-    }
-
-    this.consolidacionPollingSubscription = interval(4000).subscribe(() => consultarEstado());
-  }
-
-  private detenerPollingConsolidacion() {
-    if (this.consolidacionPollingSubscription) {
-      this.consolidacionPollingSubscription.unsubscribe();
-      this.consolidacionPollingSubscription = null;
-    }
-  }
-
-  private aplicarEstadoConsolidacion(estado: ConsolidacionManualStatus) {
-    this.consolidacionEstadoActual = estado;
-    this.consolidacionExito = estado.terminal ? estado.exito : null;
-    this.consolidacionMensaje = estado.mensaje;
-    this.consolidacionEnCurso = !estado.terminal;
-  }
-
-  private finalizarSeguimientoConsolidacion(estado: ConsolidacionManualStatus, recargarResumen: boolean) {
-    this.detenerPollingConsolidacion();
-    this.endConsolidacionProtectedActivity();
-    this.limpiarSeguimientoConsolidacionPersistido();
-    this.aplicarEstadoConsolidacion(estado);
-
-    if (recargarResumen && estado.exito) {
-      this.authService.extendSession();
-    }
-  }
-
-  private persistirSeguimientoConsolidacion(periodo: string) {
-    sessionStorage.setItem(this.CONSOLIDACION_STATUS_STORAGE_KEY, periodo);
-  }
-
-  private limpiarSeguimientoConsolidacionPersistido() {
-    sessionStorage.removeItem(this.CONSOLIDACION_STATUS_STORAGE_KEY);
-  }
-
-  private beginConsolidacionProtectedActivity() {
-    if (!this.consolidacionProtectedActivityActive) {
-      this.authService.beginProtectedActivity();
-      this.consolidacionProtectedActivityActive = true;
-    }
-  }
-
-  private endConsolidacionProtectedActivity() {
-    if (this.consolidacionProtectedActivityActive) {
-      this.authService.endProtectedActivity();
-      this.consolidacionProtectedActivityActive = false;
-    }
-  }
-
-  private construirFechaCorteConsolidacion(periodoMes: string): string | null {
-    if (!/^\d{4}-\d{2}$/.test(periodoMes)) {
-      return null;
-    }
-
-    const [anioTexto, mesTexto] = periodoMes.split('-');
-    const anio = Number(anioTexto);
-    const mes = Number(mesTexto);
-    if (!Number.isInteger(anio) || !Number.isInteger(mes) || mes < 1 || mes > 12) {
-      return null;
-    }
-
-    const ultimoDia = new Date(anio, mes, 0).getDate();
-    return `${anioTexto}-${mesTexto}-${String(ultimoDia).padStart(2, '0')}`;
   }
 
   private updateDateTime() {

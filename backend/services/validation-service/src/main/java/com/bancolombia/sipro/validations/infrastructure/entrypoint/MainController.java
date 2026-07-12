@@ -1,11 +1,9 @@
 package com.bancolombia.sipro.validations.infrastructure.entrypoint;
 
-import com.bancolombia.sipro.validations.application.dto.ConsolidacionManualStatusResponse;
 import com.bancolombia.sipro.validations.application.dto.ConsolidacionResumenResponse;
 import com.bancolombia.sipro.validations.domain.model.Producto;
 import com.bancolombia.sipro.validations.domain.model.Segmento;
 import com.bancolombia.sipro.validations.domain.service.ConsolidacionConciliacionReportService;
-import com.bancolombia.sipro.validations.domain.service.ConsolidacionManualAsyncService;
 import com.bancolombia.sipro.validations.domain.service.ConsolidacionResumenExcelReportService;
 import com.bancolombia.sipro.validations.domain.service.ConsolidacionResumenService;
 import com.bancolombia.sipro.validations.infrastructure.repository.ProductoRepository;
@@ -19,18 +17,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
-import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
@@ -48,9 +42,6 @@ public class MainController {
 
     @Autowired
     private SegmentoRepository segmentoRepository;
-
-    @Autowired
-    private ConsolidacionManualAsyncService consolidacionManualAsyncService;
 
     @Autowired
     private ConsolidacionResumenService consolidacionResumenService;
@@ -165,99 +156,10 @@ public class MainController {
         }
         }
 
-    /**
-     * Ejecuta la consolidación manual de un periodo. Restringido a administradores
-     * (grupo {@code A_SIPRO_Admin_Permisos}). No valida ventana de carga ni tiempos.
-     *
-     * @param periodo     Periodo de valoración en formato yyyy-MM-dd (ej: 2026-02-28)
-     * @param observacion Texto libre de justificación (opcional)
-     */
-    @PostMapping(value = "/consolidacion/manual", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<ConsolidacionManualStatusResponse> consolidarManual(
-            @AuthenticationPrincipal SiproAuthenticatedUser user,
-            @RequestParam("periodo") String periodo,
-            @RequestParam(value = "observacion", required = false) String observacion) {
-        Long idUsuario = requireAuthenticatedUserId(user);
-        requireAdminRole(user);
-
-        LocalDate periodoValoracion;
-        try {
-            periodoValoracion = LocalDate.parse(periodo);
-        } catch (DateTimeParseException e) {
-            return ResponseEntity.badRequest()
-                    .body(crearRespuestaInvalida(periodo, "Formato de periodo inválido. Use yyyy-MM-dd."));
-        }
-
-        try {
-            ConsolidacionManualStatusResponse response = consolidacionManualAsyncService
-            .iniciar(periodoValoracion, idUsuario,
-                observacion != null && !observacion.isBlank()
-                    ? observacion.trim()
-                    : "Consolidación manual forzada");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("Error en consolidación manual para periodo {}: {}", periodoValoracion, e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                    .body(crearRespuestaInvalida(periodoValoracion.toString(), "Error en consolidación: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Consulta el estado guardado de una consolidación manual por periodo.
-     */
-    @GetMapping(value = "/consolidacion/manual/estado", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<ConsolidacionManualStatusResponse> obtenerEstadoConsolidacionManual(
-            @RequestParam("periodo") String periodo) {
-        LocalDate periodoValoracion;
-        try {
-            periodoValoracion = LocalDate.parse(periodo);
-        } catch (DateTimeParseException e) {
-            return ResponseEntity.badRequest()
-                    .body(crearRespuestaInvalida(periodo, "Formato de periodo inválido. Use yyyy-MM-dd."));
-        }
-
-        return consolidacionManualAsyncService.obtenerEstado(periodoValoracion)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.ok(crearRespuestaSinEjecucion(periodoValoracion.toString())));
-    }
-
-    private ConsolidacionManualStatusResponse crearRespuestaInvalida(String periodo, String mensaje) {
-        ConsolidacionManualStatusResponse response = new ConsolidacionManualStatusResponse();
-        response.setPeriodo(periodo);
-        response.setEstado("NO_EJECUTADA");
-        response.setMensaje(mensaje);
-        response.setTerminal(true);
-        response.setExito(false);
-        response.setCantidadArchivosConsolidados(0);
-        response.setCantidadRegistrosConsolidados(0);
-        response.setMensajeError(mensaje);
-        return response;
-    }
-
-    private ConsolidacionManualStatusResponse crearRespuestaSinEjecucion(String periodo) {
-        ConsolidacionManualStatusResponse response = new ConsolidacionManualStatusResponse();
-        response.setPeriodo(periodo);
-        response.setEstado("SIN_EJECUCION");
-        response.setMensaje("No hay una consolidación registrada para ese periodo todavía.");
-        response.setTerminal(true);
-        response.setExito(false);
-        response.setCantidadArchivosConsolidados(0);
-        response.setCantidadRegistrosConsolidados(0);
-        return response;
-    }
-
     private Long requireAuthenticatedUserId(SiproAuthenticatedUser user) {
         if (user == null || user.idUsuario() == null) {
             throw new ResponseStatusException(UNAUTHORIZED, "No se pudo resolver el usuario autenticado.");
         }
         return user.idUsuario();
-    }
-
-    private void requireAdminRole(SiproAuthenticatedUser user) {
-        if (user == null || user.groupNames() == null
-                || !user.groupNames().contains("A_SIPRO_Admin_Permisos")) {
-            throw new ResponseStatusException(FORBIDDEN,
-                    "Solo el administrador (A_SIPRO_Admin_Permisos) puede ejecutar consolidaciones manuales.");
-        }
     }
 }

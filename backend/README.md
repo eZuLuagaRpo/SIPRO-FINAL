@@ -123,8 +123,7 @@ El truststore de Impala ya no se inyecta como JVM arg global; LzJdbcService lo a
 | GET | /api/main/productos | Catalogo de productos |
 | GET | /api/main/segmentos | Catalogo de segmentos |
 | GET | /api/main/consolidacion/resumen | Resumen consolidado mensual |
-| POST | /api/main/consolidacion/manual | Inicio de consolidacion manual temporal |
-| GET | /api/main/consolidacion/manual/estado | Estado de consolidacion manual |
+| POST | /api/admin/consolidacion/manual | Inicio de consolidacion manual (panel /admin, exclusivo Admin_Permisos). El estado se consulta como parte de /api/admin/dashboard. |
 
 ### Configuracion y LZ
 
