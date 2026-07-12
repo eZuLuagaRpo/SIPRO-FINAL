@@ -33,8 +33,8 @@ export class ResumenComponent implements OnInit, OnDestroy {
     style: 'currency',
     currency: 'COP',
     currencyDisplay: 'symbol',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
   private dateTimeInterval: ReturnType<typeof setInterval> | null = null;
 
