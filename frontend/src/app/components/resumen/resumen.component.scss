@@ -468,6 +468,37 @@
   color: #2c2a29;
 }
 
+// Colores por segmento en encabezados de las tablas de resumen — mismos valores que
+// .tablero-th-colgaap / .tablero-th-ifrs en tablero.component.scss, para que ambas pantallas
+// se lean igual (amarillo claro = Colgaap/Modificado, azul claro = Full IFRS).
+.resumen-th-label {
+  background: rgba(44, 42, 41, 0.04);
+}
+
+.resumen-th-colgaap {
+  background: rgba(253, 218, 36, 0.1);
+  border-left: 2px solid rgba(253, 218, 36, 0.35);
+  border-right: 2px solid rgba(253, 218, 36, 0.35);
+}
+
+.resumen-th-ifrs {
+  background: rgba(138, 226, 240, 0.12);
+  border-left: 2px solid rgba(66, 191, 210, 0.25);
+  border-right: 2px solid rgba(66, 191, 210, 0.25);
+}
+
+.resumen-th-colgaap-sub {
+  background: rgba(253, 218, 36, 0.1);
+  border-left: 1px solid rgba(253, 218, 36, 0.25);
+  border-right: 1px solid rgba(253, 218, 36, 0.25);
+}
+
+.resumen-th-ifrs-sub {
+  background: rgba(138, 226, 240, 0.12);
+  border-left: 1px solid rgba(66, 191, 210, 0.2);
+  border-right: 1px solid rgba(66, 191, 210, 0.2);
+}
+
 .resumen-table--summary {
   table-layout: fixed;
 }

@@ -191,6 +191,9 @@ public class AdminConsolidacionService {
         String fileName = parametroUnicoService.getString("CREFFSOS_NOMBRE_ARCHIVO_SALIDA", "CREFFSOS.xlsx");
         Set<Path> candidates = new LinkedHashSet<>();
         candidates.add(Path.of(sharedDir.trim(), fileName));
+        // Excel consolidado: mismo nombre fijo siempre (ver ConsolidacionPeriodoExecutor), se
+        // sobreescribe en cada consolidación igual que CREFFSOS — no es específico del periodo.
+        candidates.add(Path.of(sharedDir.trim(), "CONSOLIDADO.xlsx"));
         if (periodoValoracion != null) {
             candidates.add(Path.of(sharedDir.trim(), periodoValoracion.toString(), fileName));
         }
@@ -203,8 +206,8 @@ public class AdminConsolidacionService {
                     deleted++;
                 }
             } catch (Exception ex) {
-                warning = "No se pudo eliminar CREFFSOS de la ruta compartida.";
-                log.warn("No se pudo eliminar CREFFSOS compartido {}: {}", candidate, ex.getMessage());
+                warning = "No se pudieron eliminar todos los archivos de la ruta compartida.";
+                log.warn("No se pudo eliminar archivo compartido {}: {}", candidate, ex.getMessage());
             }
         }
 

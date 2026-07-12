@@ -33,6 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
@@ -70,6 +73,8 @@ public class ConsolidacionPeriodoExecutor {
     private static final List<String> ESTADOS_EXITOSOS = List.of(ESTADO_COMPLETADO, ESTADO_COMPLETADO_CON_ADVERTENCIAS);
     private static final List<String> ESTADOS_EN_CURSO = List.of(ESTADO_INICIADO, ESTADO_EN_PROCESO);
     private static final String CONSOLIDADOS_PREFIX = "consolidados/";
+    /** Nombre fijo del Excel consolidado en la ruta compartida: cada periodo reemplaza al anterior. */
+    private static final String CONSOLIDADO_NOMBRE_ARCHIVO_COMPARTIDO = "CONSOLIDADO.xlsx";
     private static final String CONTENT_TYPE_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     private static final DateTimeFormatter FECHA_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final int DEFAULT_BATCH_INSERT_SIZE = 500;
@@ -360,8 +365,12 @@ public class ConsolidacionPeriodoExecutor {
                 nombresArchivos.add(archivoConsolidado.getNombreArchivo());
             }
 
-            guardarExcelConsolidado(periodoValoracion, excelWriter);
-            List<String> advertenciasPostProceso = ejecutarPostProcesamiento(periodoValoracion, cabecera.getIdConsolidacion());
+            String advertenciaExcelConsolidado = guardarExcelConsolidado(periodoValoracion, excelWriter);
+            List<String> advertenciasPostProceso = new ArrayList<>(
+                    ejecutarPostProcesamiento(periodoValoracion, cabecera.getIdConsolidacion()));
+            if (advertenciaExcelConsolidado != null && !advertenciaExcelConsolidado.isBlank()) {
+                advertenciasPostProceso.add(advertenciaExcelConsolidado);
+            }
 
             OffsetDateTime fechaFin = OffsetDateTime.now();
             cabecera.setEstadoConsolidacion(advertenciasPostProceso.isEmpty()
@@ -760,12 +769,46 @@ public class ConsolidacionPeriodoExecutor {
         batch.clear();
     }
 
-    private void guardarExcelConsolidado(LocalDate periodoValoracion,
-                                         ConsolidatedExcelWriter excelWriter) throws IOException {
+    /**
+     * Guarda el Excel consolidado en el storage interno (con nombre por fecha, para el histórico del
+     * panel admin) y lo publica en la misma ruta compartida que usa CREFFSOS ({@code CREFFSOS_RUTA_SALIDA})
+     * con nombre fijo ({@link #CONSOLIDADO_NOMBRE_ARCHIVO_COMPARTIDO}): cada consolidación nueva
+     * reemplaza ahí a la del periodo anterior, igual que ya ocurre con CREFFSOS.
+     *
+     * @return advertencia si falló la copia a la ruta compartida, o {@code null} si todo salió bien.
+     */
+    private String guardarExcelConsolidado(LocalDate periodoValoracion,
+                                           ConsolidatedExcelWriter excelWriter) throws IOException {
         byte[] contenidoExcel = excelWriter.toByteArray();
         String rutaExcel = construirRutaExcelConsolidado(periodoValoracion);
         fileStorageService.storeBytes(contenidoExcel, rutaExcel, CONTENT_TYPE_XLSX);
         logger.info("Excel consolidado generado para periodo {} en {}", periodoValoracion, rutaExcel);
+
+        return publicarConsolidadoEnRutaCompartida(contenidoExcel);
+    }
+
+    private String publicarConsolidadoEnRutaCompartida(byte[] contenidoExcel) {
+        String outputDir = parametroUnicoService.getString("CREFFSOS_RUTA_SALIDA", "");
+        if (outputDir == null || outputDir.isBlank()) {
+            return null;
+        }
+
+        try {
+            Path targetDir = Path.of(outputDir.trim());
+            Files.createDirectories(targetDir);
+            Path targetFile = targetDir.resolve(CONSOLIDADO_NOMBRE_ARCHIVO_COMPARTIDO);
+            Files.write(targetFile,
+                    contenidoExcel,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE);
+            logger.info("Excel consolidado publicado en ruta compartida: {}", targetFile);
+            return null;
+        } catch (Exception ex) {
+            logger.warn("No se pudo copiar el Excel consolidado a ruta compartida: {}. Motivo: {}",
+                    outputDir.trim(), ex.getMessage());
+            return "Excel consolidado generado pero no copiado a red";
+        }
     }
 
     private List<String> ejecutarPostProcesamiento(LocalDate periodoValoracion, Long idConsolidacion) {
@@ -832,7 +875,11 @@ public class ConsolidacionPeriodoExecutor {
 
     private String construirRutaExcelConsolidado(LocalDate periodoValoracion) {
         String fecha = periodoValoracion.format(FECHA_FMT);
-        return CONSOLIDADOS_PREFIX + fecha + "/CONSOLIDADO_" + fecha + ".xlsx";
+        return CONSOLIDADOS_PREFIX + fecha + "/" + construirNombreArchivoConsolidado(periodoValoracion);
+    }
+
+    private String construirNombreArchivoConsolidado(LocalDate periodoValoracion) {
+        return "CONSOLIDADO_" + periodoValoracion.format(FECHA_FMT) + ".xlsx";
     }
 
     private void setCellValue(Cell cell, String valor) {
