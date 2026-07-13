@@ -37,3 +37,29 @@ app:
     schema: ${APP_LZ_SCHEMA:resultados_fcr}
     tables:
       mdm: ${APP_LZ_TABLE_MDM:fcr_mdm_datos_generales_clientes}
+  # ── CORS: dominio real del frontend en PDN ─────────────────────────────────
+  # Pendiente: el equipo de despliegue/provision aun no ha entregado el dominio.
+  # Sin valor, el navegador bloquea toda llamada del frontend real al backend —
+  # falla de forma segura (nadie queda permitido) en vez de dejar algo abierto de mas.
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
+  # ── Almacenamiento S3 real de PDN ───────────────────────────────────────────
+  # Pendiente: el equipo de despliegue/provision aun no ha entregado el bucket
+  # ni las credenciales reales. Sin estos valores, el backend no podra guardar
+  # ni leer archivos (planillas, CREFFSOS, consolidados, etc.) — falla de forma
+  # segura en vez de intentar conectarse a LocalStack por error.
+  storage:
+    s3:
+      endpoint: ${APP_STORAGE_S3_ENDPOINT:}
+      region: ${APP_STORAGE_S3_REGION:}
+      bucket: ${APP_STORAGE_S3_BUCKET:}
+      access-key: ${APP_STORAGE_S3_ACCESS_KEY:}
+      secret-key: ${APP_STORAGE_S3_SECRET_KEY:}
+  # ── Notificaciones por correo en PDN ────────────────────────────────────────
+  # outlook-win32 (default de application.yml) es una automatizacion de escritorio de
+  # Windows y NO funciona dentro de un contenedor Linux en Kubernetes — en PDN el
+  # transporte debe ser SMTP real. enabled sigue en false por defecto (opt-in) hasta
+  # que el equipo de despliegue confirme el servidor SMTP corporativo y se active
+  # explicitamente con APP_MAIL_ENABLED=true.
+  mail:
+    transport: ${APP_MAIL_TRANSPORT:smtp}

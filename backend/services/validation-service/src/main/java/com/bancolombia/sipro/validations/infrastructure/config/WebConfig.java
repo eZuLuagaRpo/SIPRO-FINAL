@@ -1,22 +1,26 @@
 package com.bancolombia.sipro.validations.infrastructure.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Configuración CORS para permitir solicitudes desde el frontend Angular
+ * Configuración CORS a nivel Spring MVC. En la práctica, con Spring Security activo,
+ * es SecurityConfig.corsConfigurationSource() quien resuelve CORS antes de llegar aquí —
+ * esta clase se mantiene alineada al mismo origen configurado para no desincronizarse.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
-    
+
+    /** Origenes permitidos para CORS. Configurable via app.cors.allowed-origins (ver application*.yml). */
+    @Value("${app.cors.allowed-origins}")
+    private String[] allowedOrigins;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(
-                    "http://localhost:4200",  // Angular dev server
-                    "http://localhost:8080"   // Backend server
-                )
+                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
                 .allowCredentials(true)

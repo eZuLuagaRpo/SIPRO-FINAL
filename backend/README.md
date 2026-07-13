@@ -2,6 +2,20 @@
 
 Backend Gradle multi-project del sistema SIPRO. El modulo operativo actual es services/validation-service, un servicio Spring Boot 3.4 sobre Java 17 con persistencia JPA/Hibernate, almacenamiento de archivos y conectividad a Landing Zone.
 
+## Requisitos previos
+
+- Java 17.0.17 o compatible con el wrapper de Gradle.
+- PostgreSQL local disponible para el perfil dev.
+- Truststore de Impala si vas a usar integracion LZ real (ver services/validation-service/src/main/resources/certificates/README.md).
+- LocalStack opcional para desarrollo con almacenamiento tipo S3 (ver deployment/README.md).
+
+## URLs utiles (desarrollo local)
+
+- Backend API: http://localhost:8080/api
+- Health: http://localhost:8080/api/health
+- Health S3: http://localhost:8080/api/health/s3
+- Actuator: http://localhost:8080/actuator/health
+
 ## Stack principal
 
 | Tecnologia | Version | Uso |
@@ -150,6 +164,5 @@ El truststore de Impala ya no se inyecta como JVM arg global; LzJdbcService lo a
 ## Documentacion relacionada
 
 - [services/validation-service/README.md](services/validation-service/README.md)
-- [../DETALLES_PROYECTO.md](../DETALLES_PROYECTO.md)
-- [../AGENTS.md](../AGENTS.md)
-- [../SECURITY.md](../SECURITY.md)
+- [SECURITY.md](SECURITY.md)
+- [deployment/README.md](deployment/README.md)

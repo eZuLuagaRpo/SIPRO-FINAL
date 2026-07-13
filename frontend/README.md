@@ -2,6 +2,20 @@
 
 Frontend SPA en Angular 20 para SIPRO. Implementa login, dashboard de inicio, carga y validacion de archivos, aprobacion de planillas y resumen consolidado con comparacion contra CREFFSOS.
 
+## Requisitos previos
+
+- Node.js 20.20.0 o superior.
+- npm 10.8.2 o superior.
+- Backend SIPRO corriendo (local o remoto) para que el proxy de /api tenga a donde apuntar.
+
+## URLs utiles (desarrollo local)
+
+- Frontend: http://localhost:4200
+- Login: http://localhost:4200/login
+- Inicio: http://localhost:4200/inicio
+- Tablero de control: http://localhost:4200/tablero
+- Resumen consolidado: http://localhost:4200/resumen
+
 ## Stack
 
 | Tecnologia | Version | Uso |
@@ -170,6 +184,4 @@ frontend/src/app/
 
 ## Referencias
 
-- [../README.md](../README.md)
-- [../backend/README.md](../backend/README.md)
-- [../DETALLES_PROYECTO.md](../DETALLES_PROYECTO.md)
+- [SECURITY.md](SECURITY.md)

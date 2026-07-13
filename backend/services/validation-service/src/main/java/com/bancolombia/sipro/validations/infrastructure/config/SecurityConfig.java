@@ -1,5 +1,6 @@
 package com.bancolombia.sipro.validations.infrastructure.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,6 +30,10 @@ import java.util.List;
 public class SecurityConfig {
 
     private final EntraAuthenticationFilter entraAuthenticationFilter;
+
+    /** Origenes permitidos para CORS. Configurable via app.cors.allowed-origins (ver application*.yml). */
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     public SecurityConfig(EntraAuthenticationFilter entraAuthenticationFilter) {
         this.entraAuthenticationFilter = entraAuthenticationFilter;
@@ -66,7 +71,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-Graph-Access-Token"));
         configuration.setAllowCredentials(true);

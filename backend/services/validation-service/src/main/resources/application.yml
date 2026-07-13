@@ -71,14 +71,21 @@ security:
 # 1. PARAMETRIZACIÓN DE NEGOCIO (Esquemas y Tablas)
 #    Permite cambiar tablas sin modificar código Java
 app:
+  # Origenes permitidos para CORS, separados por coma. En PDN debe venir del
+  # equipo de despliegue con el dominio real del frontend (APP_CORS_ALLOWED_ORIGINS).
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
   storage:
     type: ${STORAGE_TYPE:s3}
     s3:
-      endpoint: http://localhost:4566
-      region: us-east-1
-      bucket: sipro-bucket
-      access-key: test
-      secret-key: test
+      # Valores por defecto = LocalStack (simulacion de S3 en desarrollo).
+      # En PDN, el equipo de despliegue/provision debe inyectar el bucket y las
+      # credenciales reales via variables de entorno (ver application-prd.yml).
+      endpoint: ${APP_STORAGE_S3_ENDPOINT:http://localhost:4566}
+      region: ${APP_STORAGE_S3_REGION:us-east-1}
+      bucket: ${APP_STORAGE_S3_BUCKET:sipro-bucket}
+      access-key: ${APP_STORAGE_S3_ACCESS_KEY:test}
+      secret-key: ${APP_STORAGE_S3_SECRET_KEY:test}
   lz:
     # Tabla MDM completa por ambiente:
     #   DEV/QA : default.sipro_fcr_mdm_datos_generales_clientes
@@ -105,12 +112,6 @@ app:
       queue-capacity: ${APP_VALIDATION_ASYNC_QUEUE_CAPACITY:16}
       thread-name-prefix: ${APP_VALIDATION_ASYNC_THREAD_NAME_PREFIX:validation-job-}
   admin:
-    access:
-      legacy-admin-identities:
-        - ${APP_ADMIN_LEGACY_IDENTITY_1:junioraoa@bancolombia.com.co}
-        - ${APP_ADMIN_LEGACY_IDENTITY_2:junior.ortiz@bancolombia.com.co}
-        - ${APP_ADMIN_LEGACY_IDENTITY_3:junioraoa}
-        - ${APP_ADMIN_LEGACY_IDENTITY_4:junior.ortiz}
     sql:
       max-select-rows: ${APP_ADMIN_SQL_MAX_SELECT_ROWS:200}
       require-where-on-select: ${APP_ADMIN_SQL_REQUIRE_WHERE_ON_SELECT:false}

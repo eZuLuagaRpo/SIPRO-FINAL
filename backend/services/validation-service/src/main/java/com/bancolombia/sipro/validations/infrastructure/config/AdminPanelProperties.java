@@ -17,13 +17,8 @@ import java.util.stream.Collectors;
 @ConfigurationProperties(prefix = "app.admin")
 public class AdminPanelProperties {
 
-    private final Access access = new Access();
     private final Sql sql = new Sql();
     private final Logs logs = new Logs();
-
-    public Access getAccess() {
-        return access;
-    }
 
     public Sql getSql() {
         return sql;
@@ -31,27 +26,6 @@ public class AdminPanelProperties {
 
     public Logs getLogs() {
         return logs;
-    }
-
-    public static class Access {
-        private List<String> legacyAdminIdentities = new ArrayList<>(List.of(
-                "junioraoa@bancolombia.com.co",
-                "junior.ortiz@bancolombia.com.co",
-                "junioraoa",
-                "junior.ortiz"
-        ));
-
-        public List<String> getLegacyAdminIdentities() {
-            return legacyAdminIdentities;
-        }
-
-        public void setLegacyAdminIdentities(List<String> legacyAdminIdentities) {
-            this.legacyAdminIdentities = legacyAdminIdentities != null ? legacyAdminIdentities : new ArrayList<>();
-        }
-
-        public Set<String> getLegacyAdminIdentitiesNormalized() {
-            return normalizeToSet(legacyAdminIdentities);
-        }
     }
 
     public static class Sql {
