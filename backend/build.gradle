@@ -9,6 +9,9 @@ allprojects {
 
 subprojects {
     repositories {
+        maven {
+            url = uri('https://artifactory.apps.bancolombia.com/maven-bancolombia/')
+        }
         mavenCentral()
     }
 }
