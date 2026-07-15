@@ -58,8 +58,14 @@ app:
   # ── Notificaciones por correo en PDN ────────────────────────────────────────
   # outlook-win32 (default de application.yml) es una automatizacion de escritorio de
   # Windows y NO funciona dentro de un contenedor Linux en Kubernetes — en PDN el
-  # transporte debe ser SMTP real. enabled sigue en false por defecto (opt-in) hasta
-  # que el equipo de despliegue confirme el servidor SMTP corporativo y se active
-  # explicitamente con APP_MAIL_ENABLED=true.
+  # transporte es AWS SES via API (no SMTP, decision confirmada con el equipo de
+  # provision). enabled sigue en false por defecto (opt-in) hasta que se confirmen
+  # las credenciales de SES y se active explicitamente con APP_MAIL_ENABLED=true.
   mail:
-    transport: ${APP_MAIL_TRANSPORT:smtp}
+    transport: ${APP_MAIL_TRANSPORT:ses-api}
+    from: ${APP_MAIL_FROM:notificaciones@aba.infobancolombia.com}
+    # Region fija del proyecto — no varia por ambiente, ver PDN_MECANISMO_VARIABLES.md.
+    ses:
+      region: ${APP_MAIL_SES_REGION:us-east-1}
+      access-key: ${APP_MAIL_SES_ACCESS_KEY:}
+      secret-key: ${APP_MAIL_SES_SECRET_KEY:}

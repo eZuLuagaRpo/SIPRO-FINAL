@@ -16,11 +16,11 @@
 #   tokens por los valores reales ANTES de compilar. Ver el detalle completo
 #   de como funciona esto en PDN_MECANISMO_VARIABLES.md (raiz del repo).
 #
-# Los nombres de cada token son EXACTAMENTE los mismos que ya estan
-# documentados en PDN_VARIABLES.md — esa es la lista que hay que entregarle
-# al equipo de provision, para que carguen el valor real de cada uno en su
-# Variable Group de Azure DevOps (ellos tienen que crear esa lista de su
-# lado; nosotros no la podemos completar).
+# Los nombres de cada token deben coincidir EXACTAMENTE con los que espera
+# application.yml/application-prd.yml (via ${VAR:default}) — esa es la lista
+# que hay que entregarle al equipo de provision, para que carguen el valor
+# real de cada uno en su Variable Group de Azure DevOps (ellos tienen que
+# crear esa lista de su lado; nosotros no la podemos completar).
 #
 # Un solo archivo alcanza para todos los ambientes: Replace Tokens reemplaza
 # el mismo archivo de forma distinta segun que Variable Group este activo en
@@ -38,12 +38,9 @@ spring:
     username: '#{DB_USER}#'
     password: '#{DB_PASS}#'
 
-  # Correo via SMTP (por ejemplo, interfaz SMTP de AWS SES).
-  mail:
-    host: '#{MAIL_HOST}#'
-    port: '#{MAIL_PORT}#'
-    username: '#{MAIL_USERNAME}#'
-    password: '#{MAIL_PASSWORD}#'
+  # Correo: NO se usa spring.mail (SMTP) — el transporte confirmado es AWS SES
+  # via API (ver app.mail.transport / app.mail.ses abajo), asi que este bloque
+  # no aplica y se quito a proposito.
 
 security:
   ad:
@@ -70,10 +67,16 @@ app:
 
   mail:
     enabled: '#{APP_MAIL_ENABLED}#'
-    transport: smtp
-    from: '#{APP_MAIL_FROM}#'
+    transport: ses-api
+    # Remitente fijo del proyecto, ya validado en SES — no necesita token.
+    from: notificaciones@aba.infobancolombia.com
     action-url: '#{APP_MAIL_ACTION_URL}#'
     banner-url: '#{APP_MAIL_BANNER_URL}#'
+    # Credenciales IAM con permiso de envio via SES — separadas de las de S3.
+    ses:
+      region: us-east-1
+      access-key: '#{APP_MAIL_SES_ACCESS_KEY}#'
+      secret-key: '#{APP_MAIL_SES_SECRET_KEY}#'
 
 # Host/puerto de Impala — ya son los valores reales de PDN, no necesitan token.
 lz:

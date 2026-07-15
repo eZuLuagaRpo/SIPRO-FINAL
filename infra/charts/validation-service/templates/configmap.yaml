@@ -23,6 +23,3 @@ data:
   APP_MAIL_FROM: {{ .Values.env.APP_MAIL_FROM | quote }}
   APP_MAIL_ACTION_URL: {{ .Values.env.APP_MAIL_ACTION_URL | quote }}
   APP_MAIL_BANNER_URL: {{ .Values.env.APP_MAIL_BANNER_URL | quote }}
-  MAIL_HOST: {{ .Values.env.MAIL_HOST | quote }}
-  MAIL_PORT: {{ .Values.env.MAIL_PORT | quote }}
-  MAIL_USERNAME: {{ .Values.env.MAIL_USERNAME | quote }}

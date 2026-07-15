@@ -18,6 +18,42 @@ public class MailNotificationProperties {
     private String bannerResourcePath = "classpath:static/email-assets/SIPRO_BannerCorreo.png";
     private String outlookPowershellPath = "powershell.exe";
     private boolean logPreview = true;
+    private final Ses ses = new Ses();
+
+    public Ses getSes() {
+        return ses;
+    }
+
+    /** Configuracion del transporte "ses-api" (AWS SES via SDK, sin SMTP). */
+    public static class Ses {
+        private String region = "us-east-1";
+        private String accessKey;
+        private String secretKey;
+
+        public String getRegion() {
+            return region;
+        }
+
+        public void setRegion(String region) {
+            this.region = region;
+        }
+
+        public String getAccessKey() {
+            return accessKey;
+        }
+
+        public void setAccessKey(String accessKey) {
+            this.accessKey = accessKey;
+        }
+
+        public String getSecretKey() {
+            return secretKey;
+        }
+
+        public void setSecretKey(String secretKey) {
+            this.secretKey = secretKey;
+        }
+    }
 
     public boolean isEnabled() {
         return enabled;

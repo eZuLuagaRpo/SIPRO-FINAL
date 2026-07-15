@@ -1,6 +1,7 @@
 package com.bancolombia.sipro.validations.infrastructure.notification;
 
 import com.bancolombia.sipro.validations.infrastructure.config.MailNotificationProperties;
+import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,18 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sesv2.SesV2Client;
+import software.amazon.awssdk.services.sesv2.model.Destination;
+import software.amazon.awssdk.services.sesv2.model.EmailContent;
+import software.amazon.awssdk.services.sesv2.model.RawMessage;
+import software.amazon.awssdk.services.sesv2.model.SendEmailRequest;
+import software.amazon.awssdk.services.sesv2.model.SendEmailResponse;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,6 +34,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -128,6 +141,10 @@ public class MailTemplateNotificationService {
             return sendViaOutlook(normalizedEmail, safeContexto, safeReferencia);
         }
 
+        if ("ses-api".equals(transport)) {
+            return sendViaSesApi(normalizedEmail, safeContexto, safeReferencia);
+        }
+
         logPreview(normalizedEmail, safeContexto, safeReferencia, "transporte no soportado: " + transport);
         return DeliveryResult.failed("transporte no soportado: " + transport);
     }
@@ -143,6 +160,9 @@ public class MailTemplateNotificationService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, StandardCharsets.UTF_8.name());
             helper.setTo(email.recipients().toArray(new String[0]));
+            if (!email.cc().isEmpty()) {
+                helper.setCc(email.cc().toArray(new String[0]));
+            }
             if (!isBlank(properties.getFrom())) {
                 helper.setFrom(properties.getFrom());
             }
@@ -228,24 +248,97 @@ public class MailTemplateNotificationService {
         }
     }
 
-    private EmailPayload normalize(EmailPayload email) {
-        if (email == null) {
-            return new EmailPayload("SIPRO", List.of(), "<html><body><p>Sin contenido.</p></body></html>");
+    /**
+     * Envia el correo por AWS SES via API (sesv2), no SMTP. Arma el mismo MIME que la ruta
+     * SMTP (con el banner inline) y lo entrega a SES como mensaje "raw" — la version simple
+     * de la API de SES no soporta adjuntos/imagenes inline, por eso se usa el modo raw aqui.
+     */
+    private DeliveryResult sendViaSesApi(EmailPayload email, String contexto, String referencia) {
+        MailNotificationProperties.Ses sesProperties = properties.getSes();
+        if (isBlank(sesProperties.getRegion()) || isBlank(sesProperties.getAccessKey()) || isBlank(sesProperties.getSecretKey())) {
+            logPreview(email, contexto, referencia, "SES no configurado (region/credenciales faltantes)");
+            return DeliveryResult.failed("SES no configurado (region/credenciales faltantes)");
         }
 
-        Set<String> uniqueRecipients = new LinkedHashSet<>();
-        if (email.recipients() != null) {
-            for (String recipient : email.recipients()) {
-                if (!isBlank(recipient)) {
-                    uniqueRecipients.add(recipient.trim());
-                }
+        try {
+            Session session = Session.getInstance(new Properties());
+            MimeMessage mimeMessage = new MimeMessage(session);
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, StandardCharsets.UTF_8.name());
+            helper.setTo(email.recipients().toArray(new String[0]));
+            if (!email.cc().isEmpty()) {
+                helper.setCc(email.cc().toArray(new String[0]));
             }
+            if (!isBlank(properties.getFrom())) {
+                helper.setFrom(properties.getFrom());
+            }
+            helper.setSubject(email.subject());
+            helper.setText(email.htmlBody(), true);
+
+            BannerResource banner = resolveBannerResource();
+            if (banner != null) {
+                helper.addInline(BANNER_CONTENT_ID, banner.asByteArrayResource(), "image/png");
+            }
+
+            ByteArrayOutputStream rawOutput = new ByteArrayOutputStream();
+            mimeMessage.writeTo(rawOutput);
+
+            AwsBasicCredentials credentials = AwsBasicCredentials.create(
+                    sesProperties.getAccessKey(), sesProperties.getSecretKey());
+
+            List<String> allDestinations = new ArrayList<>(email.recipients());
+            allDestinations.addAll(email.cc());
+
+            try (SesV2Client sesClient = SesV2Client.builder()
+                    .region(Region.of(sesProperties.getRegion()))
+                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                    .build()) {
+
+                SendEmailRequest request = SendEmailRequest.builder()
+                        .destination(Destination.builder()
+                                .toAddresses(email.recipients())
+                                .ccAddresses(email.cc())
+                                .build())
+                        .content(EmailContent.builder()
+                                .raw(RawMessage.builder()
+                                        .data(SdkBytes.fromByteArray(rawOutput.toByteArray()))
+                                        .build())
+                                .build())
+                        .build();
+
+                SendEmailResponse response = sesClient.sendEmail(request);
+                logger.info("Correo de {} enviado para {} a {} via SES API (messageId={})",
+                        contexto, referencia, allDestinations, response.messageId());
+                return DeliveryResult.sent("ses-api");
+            }
+        } catch (Exception ex) {
+            logger.error("Error enviando correo de {} para {} por SES API: {}", contexto, referencia, ex.getMessage(), ex);
+            logPreview(email, contexto, referencia, "fallo SES API");
+            return DeliveryResult.failed(sanitizeMessage(ex.getMessage()));
+        }
+    }
+
+    private EmailPayload normalize(EmailPayload email) {
+        if (email == null) {
+            return new EmailPayload("SIPRO", List.of(), List.of(), "<html><body><p>Sin contenido.</p></body></html>");
         }
 
         return new EmailPayload(
                 defaultIfBlank(email.subject(), "SIPRO"),
-                new ArrayList<>(uniqueRecipients),
+                dedupeAndTrim(email.recipients()),
+                dedupeAndTrim(email.cc()),
                 defaultIfBlank(email.htmlBody(), "<html><body><p>Sin contenido.</p></body></html>"));
+    }
+
+    private List<String> dedupeAndTrim(List<String> values) {
+        Set<String> unique = new LinkedHashSet<>();
+        if (values != null) {
+            for (String value : values) {
+                if (!isBlank(value)) {
+                    unique.add(value.trim());
+                }
+            }
+        }
+        return new ArrayList<>(unique);
     }
 
     private void logPreview(EmailPayload email, String contexto, String referencia, String motivo) {
@@ -382,7 +475,12 @@ public class MailTemplateNotificationService {
         FAILED
     }
 
-    public record EmailPayload(String subject, List<String> recipients, String htmlBody) {
+    public record EmailPayload(String subject, List<String> recipients, List<String> cc, String htmlBody) {
+
+        /** Compatibilidad con llamadores existentes que no envian CC. */
+        public EmailPayload(String subject, List<String> recipients, String htmlBody) {
+            this(subject, recipients, List.of(), htmlBody);
+        }
     }
 
     public record DeliveryResult(DeliveryStatus status, String detail) {

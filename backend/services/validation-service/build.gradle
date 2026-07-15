@@ -46,6 +46,9 @@ dependencies {
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:apache-client'   // HTTP pool tuning para WSL2
 
+    // AWS SDK v2 para envio de correo via SES (API, no SMTP) en PDN
+    implementation 'software.amazon.awssdk:sesv2'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 

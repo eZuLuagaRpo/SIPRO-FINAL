@@ -102,6 +102,13 @@ app:
     banner-resource-path: ${APP_MAIL_BANNER_RESOURCE_PATH:classpath:static/email-assets/SIPRO_BannerCorreo.png}
     outlook-powershell-path: ${APP_MAIL_OUTLOOK_POWERSHELL:powershell.exe}
     log-preview: ${APP_MAIL_LOG_PREVIEW:true}
+    # Transporte "ses-api": AWS SES via SDK (sesv2), sin pasar por SMTP.
+    # Region fija del proyecto (ver PDN_MECANISMO_VARIABLES.md); las credenciales
+    # deben ser IAM con permiso de envio via SES, separadas de las de S3.
+    ses:
+      region: ${APP_MAIL_SES_REGION:us-east-1}
+      access-key: ${APP_MAIL_SES_ACCESS_KEY:}
+      secret-key: ${APP_MAIL_SES_SECRET_KEY:}
   excel:
     poi-byte-array-max-override: ${APP_EXCEL_POI_BYTE_ARRAY_MAX_OVERRIDE:250000000}
   validation:

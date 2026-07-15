@@ -90,21 +90,6 @@ spec:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-config
                   key: APP_MAIL_BANNER_URL
-            - name: MAIL_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-config
-                  key: MAIL_HOST
-            - name: MAIL_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-config
-                  key: MAIL_PORT
-            - name: MAIL_USERNAME
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-config
-                  key: MAIL_USERNAME
             - name: DB_USER
               # Las credenciales se leen desde Secret para no exponerlas en ConfigMap.
               valueFrom:
@@ -126,8 +111,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-secret
                   key: APP_STORAGE_S3_SECRET_KEY
-            - name: MAIL_PASSWORD
+            - name: APP_MAIL_SES_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-secret
-                  key: MAIL_PASSWORD
+                  key: APP_MAIL_SES_ACCESS_KEY
+            - name: APP_MAIL_SES_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secret
+                  key: APP_MAIL_SES_SECRET_KEY

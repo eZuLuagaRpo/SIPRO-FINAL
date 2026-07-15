@@ -48,12 +48,12 @@ env:
   # Notificaciones por correo (aprobacion de solicitudes). enabled sigue en "false" hasta
   # que el equipo de despliegue confirme el servidor SMTP corporativo real de este ambiente.
   APP_MAIL_ENABLED: "false"
-  APP_MAIL_TRANSPORT: "smtp"
+  APP_MAIL_TRANSPORT: "ses-api"
   APP_MAIL_FROM: ""
   APP_MAIL_ACTION_URL: ""
   APP_MAIL_BANNER_URL: ""
-  MAIL_HOST: ""
-  MAIL_PORT: "587"
-  MAIL_USERNAME: ""
-  # Contrasena del correo (igual que DB_PASS, se consume via Secret, no ConfigMap).
-  MAIL_PASSWORD: ""
+  # Credenciales IAM de AWS SES (via API, no SMTP) — separadas de las de S3.
+  # Se consumen via Secret, no ConfigMap. La region es fija (us-east-1) y ya
+  # tiene su default correcto en application-prd.yml, no necesita entrar aqui.
+  APP_MAIL_SES_ACCESS_KEY: ""
+  APP_MAIL_SES_SECRET_KEY: ""
