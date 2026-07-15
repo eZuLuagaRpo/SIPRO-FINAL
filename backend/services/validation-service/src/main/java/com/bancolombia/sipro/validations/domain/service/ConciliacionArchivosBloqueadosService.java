@@ -95,7 +95,8 @@ public class ConciliacionArchivosBloqueadosService {
         BigDecimal creffosValor = registrosCreffos == null
                 ? BigDecimal.ZERO
                 : registrosCreffos.stream()
-                        .map(r -> parseDecimal(r.getVlriniobl()))
+                        .map(SiproDetalleConsolidadoRegistro::getVlriniobl)
+                        .filter(java.util.Objects::nonNull)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, PlanillaResumen> resumenPorProducto = cargarResumenFullIfrs(fechaCorte);
@@ -158,17 +159,6 @@ public class ConciliacionArchivosBloqueadosService {
             logger.warn("[Conciliación] No se pudo leer la cantidad del archivo control '{}': {}",
                     rutaControl, ex.getMessage());
             return null;
-        }
-    }
-
-    private BigDecimal parseDecimal(String valor) {
-        if (valor == null || valor.isBlank()) {
-            return BigDecimal.ZERO;
-        }
-        try {
-            return new BigDecimal(valor.trim());
-        } catch (NumberFormatException ex) {
-            return BigDecimal.ZERO;
         }
     }
 
