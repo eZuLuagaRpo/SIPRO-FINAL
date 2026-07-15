@@ -28,15 +28,21 @@ public class CreffosConsolidationService {
     private final CreffosParametricGenerator creffosParametricGenerator;
     private final FileStorageService fileStorageService;
     private final ParametroUnicoService parametroUnicoService;
+    private final ArchivosBloqueadosService archivosBloqueadosService;
+    private final ConciliacionArchivosBloqueadosService conciliacionArchivosBloqueadosService;
 
     public CreffosConsolidationService(SiproDetalleConsolidadoRegistroRepository consolidadoRegistroRepository,
                                        CreffosParametricGenerator creffosParametricGenerator,
                                        FileStorageService fileStorageService,
-                                       ParametroUnicoService parametroUnicoService) {
+                                       ParametroUnicoService parametroUnicoService,
+                                       ArchivosBloqueadosService archivosBloqueadosService,
+                                       ConciliacionArchivosBloqueadosService conciliacionArchivosBloqueadosService) {
         this.consolidadoRegistroRepository = consolidadoRegistroRepository;
         this.creffosParametricGenerator = creffosParametricGenerator;
         this.fileStorageService = fileStorageService;
         this.parametroUnicoService = parametroUnicoService;
+        this.archivosBloqueadosService = archivosBloqueadosService;
+        this.conciliacionArchivosBloqueadosService = conciliacionArchivosBloqueadosService;
     }
 
     /**
@@ -72,6 +78,28 @@ public class CreffosConsolidationService {
             String sharedCopyWarning = publicarEnRutaCompartida(generatedFile);
             logger.info("[CREFFSOS] Archivo paramétrico generado: {} (filas={}, formato={})",
                     storageKey, generatedFile.rowCount(), generatedFile.format());
+
+            // Copia protegida contra edicion, en carpeta separada — totalmente independiente
+            // de la publicacion normal de arriba. El cierre del CREFFSOS marca el fin del
+            // periodo: para este punto ya deberian estar publicadas las aprobaciones de Full
+            // IFRS de ese periodo (ver PlanillaUseCase).
+            archivosBloqueadosService.publicarArchivo(fechaCorte, generatedFile.protectedFileName(),
+                    generatedFile.protectedContent());
+
+            // Ultima pieza antes de comprimir: el Excel de conciliacion compara, para el
+            // CREFFSOS y cada planilla Full IFRS del periodo, lo bloqueado contra lo
+            // desbloqueado — debe entrar al zip, por eso se genera y publica antes de comprimir.
+            try {
+                ConciliacionArchivosBloqueadosService.GeneratedConciliacion conciliacion =
+                        conciliacionArchivosBloqueadosService.generar(fechaCorte, registros);
+                archivosBloqueadosService.publicarArchivo(fechaCorte, conciliacion.fileName(), conciliacion.content());
+            } catch (Exception ex) {
+                logger.warn("[CREFFSOS] No se pudo generar el Excel de conciliacion de archivos bloqueados para '{}': {}",
+                        fechaCorte, ex.getMessage());
+            }
+
+            archivosBloqueadosService.comprimirYFinalizarPeriodo(fechaCorte);
+
             return PublicationResult.generated(storageKey, generatedFile.fileName(), sharedCopyWarning);
         } catch (Exception ex) {
             throw new IllegalStateException("No se pudo publicar el archivo CREFFSOS paramétrico: " + ex.getMessage(), ex);

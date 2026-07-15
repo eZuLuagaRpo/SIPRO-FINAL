@@ -3,6 +3,7 @@ package com.bancolombia.sipro.validations.application.usecase;
 import com.bancolombia.sipro.validations.application.dto.TableroControlResponse;
 import com.bancolombia.sipro.validations.domain.model.Producto;
 import com.bancolombia.sipro.validations.domain.model.SiproDetalleCargaPlanillas;
+import com.bancolombia.sipro.validations.domain.service.ArchivosBloqueadosService;
 import com.bancolombia.sipro.validations.domain.service.ConsolidacionPlanillasService;
 import com.bancolombia.sipro.validations.domain.service.ExcelMetadataService;
 import com.bancolombia.sipro.validations.domain.service.FileStorageService;
@@ -45,6 +46,7 @@ class PlanillaUseCaseTableroControlTest {
     @Mock private ProductoRepository productoRepository;
     @Mock private SegmentoRepository segmentoRepository;
     @Mock private ParametroUnicoService parametroUnicoService;
+    @Mock private ArchivosBloqueadosService archivosBloqueadosService;
 
     private PlanillaUseCase useCase;
 
@@ -55,7 +57,8 @@ class PlanillaUseCaseTableroControlTest {
                 uprRepository, usuarioLoginRepository,
                 fileStorageService, excelMetadataService, ventanaCargaService,
                 consolidacionPlanillasService, planillaNotificationService,
-                loteMemoryStore, productoRepository, segmentoRepository, parametroUnicoService
+                loteMemoryStore, productoRepository, segmentoRepository, parametroUnicoService,
+                archivosBloqueadosService
         );
     }
 

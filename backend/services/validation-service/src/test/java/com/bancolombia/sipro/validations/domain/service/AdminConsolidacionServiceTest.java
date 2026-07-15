@@ -52,6 +52,9 @@ class AdminConsolidacionServiceTest {
     private NotificacionConsolidacionService notificacionConsolidacionService;
 
     @Mock
+    private ArchivosBloqueadosService archivosBloqueadosService;
+
+    @Mock
     private PlatformTransactionManager transactionManager;
 
     @Mock
@@ -69,6 +72,7 @@ class AdminConsolidacionServiceTest {
                 fileStorageService,
                 parametroUnicoService,
                 notificacionConsolidacionService,
+                archivosBloqueadosService,
                 transactionManager
         );
     }

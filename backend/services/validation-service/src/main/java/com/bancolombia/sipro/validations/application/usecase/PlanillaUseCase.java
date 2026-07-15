@@ -78,6 +78,7 @@ public class PlanillaUseCase {
     private final ProductoRepository productoRepository;
     private final SegmentoRepository segmentoRepository;
     private final ParametroUnicoService parametroUnicoService;
+    private final com.bancolombia.sipro.validations.domain.service.ArchivosBloqueadosService archivosBloqueadosService;
 
     private static final String[] MESES_ES = {
         "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -97,7 +98,8 @@ public class PlanillaUseCase {
             LoteMemoryStore loteMemoryStore,
             ProductoRepository productoRepository,
             SegmentoRepository segmentoRepository,
-            ParametroUnicoService parametroUnicoService) {
+            ParametroUnicoService parametroUnicoService,
+            com.bancolombia.sipro.validations.domain.service.ArchivosBloqueadosService archivosBloqueadosService) {
         this.planillaRepository = planillaRepository;
         this.validacionRepository = validacionRepository;
         this.rechazoRepository = rechazoRepository;
@@ -112,6 +114,7 @@ public class PlanillaUseCase {
         this.productoRepository = productoRepository;
         this.segmentoRepository = segmentoRepository;
         this.parametroUnicoService = parametroUnicoService;
+        this.archivosBloqueadosService = archivosBloqueadosService;
     }
 
     @Transactional
@@ -528,6 +531,7 @@ public class PlanillaUseCase {
         final String rutaXlsxAprobado = nuevaRutaXlsx;
         final String rutaCtrlAprobado = nuevaRutaControl;
         final String nombreArchivoXlsx = planilla.getNombreArchivoFuente();
+        final LocalDate fechaCorteAprobacion = planilla.getFechaCorteInformacion();
         boolean isFullIfrsAprobacion = planilla.getSegmento() != null
                 && (planilla.getSegmento().toLowerCase().contains("full")
                     || planilla.getSegmento().toLowerCase().contains("ifrs"));
@@ -537,6 +541,7 @@ public class PlanillaUseCase {
                 @Override
                 public void afterCommit() {
                     copiarACarpertaCompartidaFullIfrs(rutaXlsxAprobado, rutaCtrlAprobado, nombreArchivoXlsx);
+                    copiarACarpetaBloqueadaFullIfrs(fechaCorteAprobacion, rutaXlsxAprobado, rutaCtrlAprobado, nombreArchivoXlsx);
                 }
             });
         }
@@ -818,6 +823,80 @@ public class PlanillaUseCase {
         } catch (Exception e) {
             logger.warn("[Full IFRS] No se pudo copiar a la carpeta compartida '{}': {}",
                     rutaRaiz, e.getMessage());
+        }
+    }
+
+    // Misma contrasena que ya usa ConsolidacionResumenExcelReportService para "proteger hoja"
+    // (no es cifrado real). Intencionalmente igual, a pedido del negocio, para las copias
+    // bloqueadas que se publican en ARCHIVOS_BLOQUEADOS_RUTA_SALIDA.
+    private static final String LOCKED_FILE_PASSWORD = "sipro-readonly";
+
+    /**
+     * Copia protegida contra edicion de una planilla Full IFRS aprobada: el xlsx se reabre y se
+     * le aplica "proteger hoja", y el control (txt) se convierte a Word protegido de la misma
+     * forma. Totalmente independiente de {@link #copiarACarpertaCompartidaFullIfrs}: si esta
+     * copia falla, no afecta la publicacion normal ni la aprobacion de la planilla.
+     */
+    private void copiarACarpetaBloqueadaFullIfrs(LocalDate fechaCorte, String rutaXlsx, String rutaControl,
+                                                  String nombreArchivo) {
+        try {
+            if (rutaXlsx != null && !rutaXlsx.isEmpty()) {
+                byte[] xlsxBytes = fileStorageService.getFileAsBytes(rutaXlsx);
+                byte[] xlsxProtegido = protegerXlsxContraEdicion(xlsxBytes);
+                String nombreDest = (nombreArchivo != null && !nombreArchivo.isBlank())
+                        ? nombreArchivo
+                        : extraerNombreLimpio(rutaXlsx);
+                archivosBloqueadosService.publicarArchivo(fechaCorte, nombreDest, xlsxProtegido);
+            }
+
+            if (rutaControl != null && !rutaControl.isEmpty()) {
+                byte[] ctrlBytes = fileStorageService.getFileAsBytes(rutaControl);
+                byte[] wordProtegido = convertirControlAWordProtegido(ctrlBytes);
+                String nombreCtrlBase = extraerNombreLimpio(rutaControl);
+                String nombreCtrlDest = nombreCtrlBase.toLowerCase(java.util.Locale.ROOT).endsWith(".txt")
+                        ? nombreCtrlBase.substring(0, nombreCtrlBase.length() - 4) + ".docx"
+                        : nombreCtrlBase + ".docx";
+                archivosBloqueadosService.publicarArchivo(fechaCorte, nombreCtrlDest, wordProtegido);
+            }
+        } catch (Exception e) {
+            logger.warn("[Full IFRS] No se pudo publicar la copia bloqueada del periodo '{}': {}",
+                    fechaCorte, e.getMessage());
+        }
+    }
+
+    /**
+     * Reabre un xlsx ya generado y le aplica "proteger hoja" (se puede abrir y leer, no editar)
+     * en todas sus hojas, sin tocar el contenido.
+     */
+    private byte[] protegerXlsxContraEdicion(byte[] xlsxBytes) throws IOException {
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook =
+                     new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(xlsxBytes));
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                workbook.getSheetAt(i).protectSheet(LOCKED_FILE_PASSWORD);
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    /**
+     * Convierte el contenido de un archivo de control (txt) a un Word simple, protegido contra
+     * edicion (se puede abrir y leer, no editar sin la contrasena) — mismo mecanismo de Word
+     * equivalente a "proteger hoja" de Excel.
+     */
+    private byte[] convertirControlAWordProtegido(byte[] txtBytes) throws IOException {
+        String contenido = new String(txtBytes, StandardCharsets.UTF_8);
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument documento = new org.apache.poi.xwpf.usermodel.XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            for (String linea : contenido.split("\\r?\\n", -1)) {
+                org.apache.poi.xwpf.usermodel.XWPFParagraph parrafo = documento.createParagraph();
+                org.apache.poi.xwpf.usermodel.XWPFRun run = parrafo.createRun();
+                run.setText(linea);
+            }
+            documento.enforceReadonlyProtection(LOCKED_FILE_PASSWORD, org.apache.poi.poifs.crypt.HashAlgorithm.sha256);
+            documento.write(out);
+            return out.toByteArray();
         }
     }
 

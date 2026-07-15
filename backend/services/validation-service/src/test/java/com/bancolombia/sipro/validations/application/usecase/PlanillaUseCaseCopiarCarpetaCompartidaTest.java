@@ -5,6 +5,7 @@ import com.bancolombia.sipro.validations.domain.service.ExcelMetadataService;
 import com.bancolombia.sipro.validations.domain.service.VentanaCargaService;
 import com.bancolombia.sipro.validations.domain.service.ConsolidacionPlanillasService;
 import com.bancolombia.sipro.validations.domain.service.FileStorageService;
+import com.bancolombia.sipro.validations.domain.service.ArchivosBloqueadosService;
 import com.bancolombia.sipro.validations.infrastructure.repository.ProductoRepository;
 import com.bancolombia.sipro.validations.infrastructure.repository.SegmentoRepository;
 import com.bancolombia.sipro.validations.infrastructure.repository.SiproDetalleArchivoValidacionRepository;
@@ -47,6 +48,7 @@ class PlanillaUseCaseCopyToSharedFolderTest {
     @Mock private ProductoRepository productoRepository;
     @Mock private SegmentoRepository segmentoRepository;
     @Mock private ParametroUnicoService parametroUnicoService;
+    @Mock private ArchivosBloqueadosService archivosBloqueadosService;
 
     private PlanillaUseCase useCase;
 
@@ -66,7 +68,8 @@ class PlanillaUseCaseCopyToSharedFolderTest {
                 loteMemoryStore,
                 productoRepository,
                 segmentoRepository,
-                parametroUnicoService
+                parametroUnicoService,
+                archivosBloqueadosService
         );
     }
 

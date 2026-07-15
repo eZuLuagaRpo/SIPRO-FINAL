@@ -45,6 +45,10 @@ public class CreffosParametricGenerator {
     private static final int DEFAULT_NUMERIC_SCALE = 2;
     private static final int LZ_LOOKUP_CHUNK_SIZE = 500;
     private static final Pattern SQL_IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
+    // Misma contrasena que ya usa ConsolidacionResumenExcelReportService para "proteger hoja"
+    // (no es cifrado real, es la proteccion de edicion de Excel). Intencionalmente igual, a
+    // pedido del negocio, para la copia bloqueada que se publica en ARCHIVOS_BLOQUEADOS_RUTA_SALIDA.
+    private static final String LOCKED_SHEET_PASSWORD = "sipro-readonly";
 
     private final CreffosParametroColumnasRepository parametroColumnasRepository;
     private final ParametroUnicoService parametroUnicoService;
@@ -83,12 +87,22 @@ public class CreffosParametricGenerator {
             rows.add(output);
         }
         byte[] content = renderFile(definitions, rows, outputConfig);
+
+        // Copia protegida contra edicion para ARCHIVOS_BLOQUEADOS_RUTA_SALIDA: se arma con las
+        // mismas filas ya calculadas arriba (sin repetir consultas a la LZ), siempre en XLSX sin
+        // importar el formato configurado para la salida normal (CSV/TSV/XLSX).
+        byte[] protectedContent = renderXlsx(definitions, rows, outputConfig.includeHeader(),
+                outputConfig.sheetName(), LOCKED_SHEET_PASSWORD);
+        String protectedFileName = ensureExtension(DEFAULT_OUTPUT_NAME, "XLSX");
+
         return new GeneratedCreffosFile(
                 ensureExtension(outputConfig.fileName(), outputConfig.format()),
                 outputConfig.contentType(),
                 content,
                 rows.size(),
-                outputConfig.format()
+                outputConfig.format(),
+                protectedFileName,
+                protectedContent
         );
     }
 
@@ -553,7 +567,7 @@ public class CreffosParametricGenerator {
         return switch (outputConfig.format()) {
             case "CSV" -> renderDelimited(definitions, rows, outputConfig.includeHeader(), ';');
             case "TSV" -> renderDelimited(definitions, rows, outputConfig.includeHeader(), '\t');
-            default -> renderXlsx(definitions, rows, outputConfig.includeHeader(), outputConfig.sheetName());
+            default -> renderXlsx(definitions, rows, outputConfig.includeHeader(), outputConfig.sheetName(), null);
         };
     }
 
@@ -581,10 +595,17 @@ public class CreffosParametricGenerator {
     private byte[] renderXlsx(List<CreffosColumnDefinition> definitions,
                               List<Map<String, String>> rows,
                               boolean includeHeader,
-                              String sheetName) {
+                              String sheetName,
+                              String protectSheetPassword) {
         try (SXSSFWorkbook workbook = new SXSSFWorkbook(500);
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             var sheet = workbook.createSheet(firstNonBlank(sheetName, DEFAULT_SHEET_NAME));
+            if (protectSheetPassword != null && !protectSheetPassword.isBlank()) {
+                // Protege contra edicion (no es cifrado real): el archivo se abre sin pedir
+                // nada, pero no se puede modificar sin la contrasena. Igual a como ya lo hace
+                // ConsolidacionResumenExcelReportService para el resumen consolidado.
+                sheet.protectSheet(protectSheetPassword);
+            }
             int rowIndex = 0;
             if (includeHeader) {
                 Row headerRow = sheet.createRow(rowIndex++);
@@ -803,7 +824,9 @@ public class CreffosParametricGenerator {
                                        String contentType,
                                        byte[] content,
                                        int rowCount,
-                                       String format) {
+                                       String format,
+                                       String protectedFileName,
+                                       byte[] protectedContent) {
     }
 
     private record OutputConfig(String format,

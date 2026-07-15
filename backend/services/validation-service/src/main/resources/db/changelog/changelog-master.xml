@@ -20,5 +20,6 @@
     <include file="db/changelog/013-archivo-validacion-control-cantidad.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/014-lz-f-ult-actualizacion.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/015-ifrs-planillas-ruta-compartida.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/017-archivos-bloqueados-ruta-salida.xml" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

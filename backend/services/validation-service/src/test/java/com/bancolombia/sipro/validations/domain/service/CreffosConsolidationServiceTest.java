@@ -44,6 +44,12 @@ class CreffosConsolidationServiceTest {
     @Mock
     private ParametroUnicoService parametroUnicoService;
 
+    @Mock
+    private ArchivosBloqueadosService archivosBloqueadosService;
+
+    @Mock
+    private ConciliacionArchivosBloqueadosService conciliacionArchivosBloqueadosService;
+
     private CreffosConsolidationService service;
 
     @BeforeEach
@@ -52,7 +58,9 @@ class CreffosConsolidationServiceTest {
                 consolidadoRegistroRepository,
                 creffosParametricGenerator,
                 fileStorageService,
-                parametroUnicoService
+                parametroUnicoService,
+                archivosBloqueadosService,
+                conciliacionArchivosBloqueadosService
         );
     }
 
@@ -72,7 +80,9 @@ class CreffosConsolidationServiceTest {
                         "text/csv; charset=UTF-8",
                         contenido,
                         1,
-                        "CSV"
+                        "CSV",
+                        "CREFFSOS.xlsx",
+                        contenido
                 ));
         when(parametroUnicoService.getString("CREFFSOS_RUTA_SALIDA", "")).thenReturn(tempDir.toString());
 
@@ -122,7 +132,9 @@ class CreffosConsolidationServiceTest {
                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                 contenido,
                                 1,
-                                "XLSX"
+                                "XLSX",
+                                "CREFFSOS.xlsx",
+                                contenido
                         ));
                 when(parametroUnicoService.getString("CREFFSOS_RUTA_SALIDA", "")).thenReturn(invalidTarget.toString());
 

@@ -44,6 +44,7 @@ public class AdminConsolidacionService {
     private final FileStorageService fileStorageService;
     private final ParametroUnicoService parametroUnicoService;
     private final NotificacionConsolidacionService notificacionConsolidacionService;
+    private final ArchivosBloqueadosService archivosBloqueadosService;
     private final TransactionTemplate transactionTemplate;
 
     public AdminConsolidacionService(
@@ -53,6 +54,7 @@ public class AdminConsolidacionService {
             FileStorageService fileStorageService,
             ParametroUnicoService parametroUnicoService,
             NotificacionConsolidacionService notificacionConsolidacionService,
+            ArchivosBloqueadosService archivosBloqueadosService,
             PlatformTransactionManager transactionManager) {
         this.consolidacionRepository = consolidacionRepository;
         this.consolidacionArchivoRepository = consolidacionArchivoRepository;
@@ -60,6 +62,7 @@ public class AdminConsolidacionService {
         this.fileStorageService = fileStorageService;
         this.parametroUnicoService = parametroUnicoService;
         this.notificacionConsolidacionService = notificacionConsolidacionService;
+        this.archivosBloqueadosService = archivosBloqueadosService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -92,6 +95,7 @@ public class AdminConsolidacionService {
 
         StorageCleanupSummary storageSummary = eliminarArchivosStorage(cabecera.getPeriodoValoracion());
         SharedCleanupSummary sharedSummary = eliminarArchivoCompartido(cabecera.getPeriodoValoracion());
+        archivosBloqueadosService.eliminarPeriodo(cabecera.getPeriodoValoracion());
 
         log.info("Consolidación {} eliminada por usuario {}. Periodo: {}. Registros: {}. Archivos BD: {}. "
                         + "Storage eliminados: {}. Motivo: {}",

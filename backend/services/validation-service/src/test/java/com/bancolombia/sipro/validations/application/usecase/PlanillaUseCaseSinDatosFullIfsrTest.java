@@ -41,6 +41,7 @@ class PlanillaUseCaseSinDatosFullIfrsTest {
     @Mock private com.bancolombia.sipro.validations.infrastructure.repository.ProductoRepository productoRepository;
     @Mock private com.bancolombia.sipro.validations.infrastructure.repository.SegmentoRepository segmentoRepository;
     @Mock private ParametroUnicoService parametroUnicoService;
+    @Mock private com.bancolombia.sipro.validations.domain.service.ArchivosBloqueadosService archivosBloqueadosService;
 
     private PlanillaUseCase useCase;
 
@@ -60,7 +61,8 @@ class PlanillaUseCaseSinDatosFullIfrsTest {
                 loteMemoryStore,
                 productoRepository,
                 segmentoRepository,
-                parametroUnicoService
+                parametroUnicoService,
+                archivosBloqueadosService
         );
     }
 
